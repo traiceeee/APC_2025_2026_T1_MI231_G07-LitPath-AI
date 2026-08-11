@@ -9,7 +9,7 @@ import {
     Clock, Bookmark, AlertCircle, TrendingUp, BookOpen, CheckCircle,
     X, EyeOff, Menu, Calendar, Users, ChevronLeft, ChevronRight,
     Trophy, Medal, Briefcase, GraduationCap, BarChart3, Copy, Info,
-    User, Key, RefreshCw, Download, Home
+    User, Key, RefreshCw, Download, Home, Archive
 } from "lucide-react";
 import dostLogo from "../../assets/images/dost-logo.png";
 import { API_BASE_URL, apiHeaders } from '../../services/api';
@@ -136,6 +136,39 @@ const AdminDashboard = () => {
     // ---------- Dormant Materials Count ----------
     const [dormantCount, setDormantCount] = useState(0);
 
+    // ---------- Top Rated Modal ----------
+    const [showTopicMaterialsModal, setShowTopicMaterialsModal] = useState(false);
+    const [selectedTopicName, setSelectedTopicName] = useState('');
+    const [selectedTopicViewCount, setSelectedTopicViewCount] = useState(0);
+    const [topicMaterials, setTopicMaterials] = useState([]);
+
+    // ---------- Most Viewed Theses ----------
+    const [showAllThesesModal, setShowAllThesesModal] = useState(false);
+    const [allTheses, setAllTheses] = useState([]);
+    const [allThesesLoading, setAllThesesLoading] = useState(false);
+
+    // ---------- Gender Distribution ----------
+    const [showGenderDetailModal, setShowGenderDetailModal] = useState(false);
+    const [selectedGenderItem, setSelectedGenderItem] = useState(null);
+    const [hoveredGenderSegment, setHoveredGenderSegment] = useState(null);
+
+    // ---------- Top Failed Queries ----------
+    const [showAllFailedQueriesModal, setShowAllFailedQueriesModal] = useState(false);
+    const [allFailedQueries, setAllFailedQueries] = useState([]);
+    const [allFailedQueriesLoading, setAllFailedQueriesLoading] = useState(false);
+
+    // ---------- Activity Trends ----------
+    const [showActivityTrendDetailModal, setShowActivityTrendDetailModal] = useState(false);
+    const [selectedActivityBucket, setSelectedActivityBucket] = useState(null);
+    const [activityBucketMaterials, setActivityBucketMaterials] = useState([]);
+    const [activityBucketLoading, setActivityBucketLoading] = useState(false);
+
+    // ---------- Citation Activity ----------
+    const [showCitationDetailModal, setShowCitationDetailModal] = useState(false);
+    const [selectedCitationBucket, setSelectedCitationBucket] = useState(null);
+    const [citationBucketMaterials, setCitationBucketMaterials] = useState([]);
+    const [citationBucketLoading, setCitationBucketLoading] = useState(false);
+
     // ---------- Material Ratings Date Filter ----------
     const ratingsDateFilterOptions = ['All', 'Year', 'Month', 'Last 7 days', 'Custom range'];
     const [ratingsDateFilterType, setRatingsDateFilterType] = useState('All');
@@ -157,6 +190,16 @@ const AdminDashboard = () => {
     // ---------- Dormant Materials Modal ----------
     const [showDormantMaterialsModal, setShowDormantMaterialsModal] = useState(false);
     const [dormantMaterialsList, setDormantMaterialsList] = useState([]);
+    const [showVotesModal, setShowVotesModal] = useState(false);
+    const [showHelpfulModal, setShowHelpfulModal] = useState(false);
+    const [showNotRelevantModal, setShowNotRelevantModal] = useState(false);
+    const [showRelevanceScoreModal, setShowRelevanceScoreModal] = useState(false);
+    const [showRatingTrendDetailModal, setShowRatingTrendDetailModal] = useState(false);
+    const [selectedTrendBucket, setSelectedTrendBucket] = useState(null);
+    const [showTopRatedModal, setShowTopRatedModal] = useState(false);
+    const [showArchiveConfirmModal, setShowArchiveConfirmModal] = useState(false);
+    const [archiveTargetMaterial, setArchiveTargetMaterial] = useState(null);
+    const [hoveredSegment, setHoveredSegment] = useState<"helpful" | "notRelevant" | null>(null);
 
     // ---------- Feedback Details Modal ----------
     const [selectedFeedback, setSelectedFeedback] = useState(null);
@@ -298,6 +341,72 @@ const AdminDashboard = () => {
         }
         
         return true;
+    };
+
+    const getTrendBarDateRange = (item) => {
+        const formatDateLocal = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        if (overviewDateFilterType === 'Year') {
+            const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            let monthIndex = monthNames.findIndex(m => m.toLowerCase() === String(item.month).toLowerCase());
+            if (monthIndex === -1) {
+                // Try abbreviated match (e.g. "Mar")
+                monthIndex = monthNames.findIndex(m => m.slice(0, 3).toLowerCase() === String(item.month).slice(0, 3).toLowerCase());
+            }
+            if (monthIndex === -1) {
+                console.error('Could not parse month from item.month:', item.month);
+                return { from: null, to: null };
+            }
+            const start = new Date(item.year, monthIndex, 1);
+            const end = new Date(item.year, monthIndex + 1, 0);
+            return { from: formatDateLocal(start), to: formatDateLocal(end) };
+        }
+        if (overviewDateFilterType === 'Month') {
+            return { from: item.week_start, to: item.week_end };
+        }
+        if (overviewDateFilterType === 'Last 7 days') {
+            return { from: item.day, to: item.day };
+        }
+        if (overviewDateFilterType === 'Custom range') {
+            return { from: item.bucketStart, to: item.bucketEnd };
+        }
+        return { from: null, to: null };
+    };
+
+    const getCitationPointDateRange = (item) => {
+        const formatDateLocal = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        if (overviewDateFilterType === 'Year') {
+            const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            let monthIndex = monthNames.findIndex(m => m.toLowerCase() === String(item.month).toLowerCase());
+            if (monthIndex === -1) {
+                monthIndex = monthNames.findIndex(m => m.slice(0, 3).toLowerCase() === String(item.month).slice(0, 3).toLowerCase());
+            }
+            if (monthIndex === -1) return { from: null, to: null };
+            const start = new Date(item.year, monthIndex, 1);
+            const end = new Date(item.year, monthIndex + 1, 0);
+            return { from: formatDateLocal(start), to: formatDateLocal(end) };
+        }
+        if (overviewDateFilterType === 'Month') {
+            return { from: item.week_start, to: item.week_end };
+        }
+        if (overviewDateFilterType === 'Last 7 days') {
+            return { from: item.day, to: item.day };
+        }
+        if (overviewDateFilterType === 'Custom range') {
+            return { from: item.day || null, to: item.day || null };
+        }
+        return { from: null, to: null };
     };
 
     // ---------- OVERVIEW DASHBOARD FETCH FUNCTIONS (all use getDateRange()) ----------
@@ -564,6 +673,8 @@ const AdminDashboard = () => {
                             label: startLabel, // show only start date under bar
                             tooltipRange: rangeLabel,
                             views: totalViews,
+                            bucketStart: groupItems[0].day,
+                            bucketEnd: groupItems[groupItems.length - 1].day,
                         });
                     }
                     data = grouped;
@@ -1187,23 +1298,78 @@ const AdminDashboard = () => {
     const getTopMaterials = (ratingsArray) => {
         const counts = {};
         ratingsArray.forEach(r => {
-            if (r.relevant === true) {
-                const title = r.material_title || r.document_file || 'Unknown';
-                counts[title] = (counts[title] || 0) + 1;
-            }
+            const title = r.material_title || r.document_file || r.document_name || r.title || r.thesis_title || 'Unknown';
+            counts[title] = (counts[title] || 0) + 1;
         });
         return Object.entries(counts)
             .sort(([, a], [, b]) => b - a)
-            .slice(0, 5)
             .map(([title, count]) => ({ title, count }));
     };
 
+    const getDonutSectorPath = (startAngle, endAngle, outerRadius = 15.5, innerRadius = 8) => {
+        const mapCssAngleToSvg = (cssAngle) => ((cssAngle + 270) % 360);
+        const degToRad = (angle) => (Math.PI / 180) * angle;
+        const startRad = degToRad(mapCssAngleToSvg(startAngle));
+        const endRad = degToRad(mapCssAngleToSvg(endAngle));
+        const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+        const outerStartX = 16 + outerRadius * Math.cos(startRad);
+        const outerStartY = 16 + outerRadius * Math.sin(startRad);
+        const outerEndX = 16 + outerRadius * Math.cos(endRad);
+        const outerEndY = 16 + outerRadius * Math.sin(endRad);
+        const innerStartX = 16 + innerRadius * Math.cos(endRad);
+        const innerStartY = 16 + innerRadius * Math.sin(endRad);
+        const innerEndX = 16 + innerRadius * Math.cos(startRad);
+        const innerEndY = 16 + innerRadius * Math.sin(startRad);
+
+        return `M ${outerStartX} ${outerStartY} A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${outerEndX} ${outerEndY} L ${innerStartX} ${innerStartY} A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerEndX} ${innerEndY} Z`;
+    };
+
+    const getVoteSourceName = (vote) => {
+        return vote.material_title || vote.document_file || vote.document_name || vote.title || vote.thesis_title || 'Unknown material';
+    };
+
+    const getVoteMaterialTitle = (vote) => getVoteSourceName(vote);
+
+    const getRelevanceDetailsByMaterial = () => {
+        const grouped = {};
+        filteredRatings.forEach((rating) => {
+            const title = getVoteMaterialTitle(rating);
+            if (!title) return;
+            if (!grouped[title]) {
+                grouped[title] = { title, helpful: 0, notRelevant: 0, total: 0 };
+            }
+            if (rating.relevant === true) grouped[title].helpful += 1;
+            if (rating.relevant === false) grouped[title].notRelevant += 1;
+            if (rating.relevant === true || rating.relevant === false) grouped[title].total += 1;
+        });
+
+        return Object.values(grouped)
+            .filter(item => item.total > 0)
+            .map(item => {
+                const relevance = item.total > 0 ? (item.helpful / item.total) * 100 : 0;
+                return {
+                    ...item,
+                    relevance: relevance,
+                    relevanceRounded: Math.round(relevance),
+                    needsReview: item.notRelevant > 0 || relevance < 70
+                };
+            })
+            .sort((a, b) => a.relevance - b.relevance || a.title.localeCompare(b.title));
+    };
+
     // Then counts that depend on filteredRatings
-    const helpfulCount = filteredRatings.filter(r => r.relevant === true).length;
-    const notRelevantCount = filteredRatings.filter(r => r.relevant === false).length;
+    const helpfulRatings = filteredRatings.filter(r => r.relevant === true);
+    const notRelevantRatings = filteredRatings.filter(r => r.relevant === false);
+    const helpfulCount = helpfulRatings.length;
+    const helpfulMaterialsByTitle = getTopMaterials(helpfulRatings);
+    const notRelevantMaterialsByTitle = getTopMaterials(notRelevantRatings);
+    const notRelevantCount = notRelevantRatings.length;
     const totalVotes = helpfulCount + notRelevantCount;
     const helpfulPercent = totalVotes ? (helpfulCount / totalVotes) * 100 : 0;
-
+    const helpfulAngle = helpfulPercent * 3.6;
+    const relevanceDetails = getRelevanceDetailsByMaterial();
+    const topRatedMaterials = getRelevanceDetailsByMaterial()
+        .sort((a, b) => b.helpful - a.helpful || a.title.localeCompare(b.title));
 
     // Returns { start, end } as Date objects for the current filter
     const getCurrentDateRange = () => {
@@ -1467,6 +1633,8 @@ const AdminDashboard = () => {
 
         // Return the data in the format expected by the chart
         return buckets.map(b => ({
+            start: b.start,
+            end: b.end,
             displayLabel: b.label,
             tooltipRange: b.tooltip,
             avgScore: b.total > 0 ? (b.helpful / b.total) * 100 : 0,
@@ -2577,6 +2745,264 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleOpenVotesModal = () => {
+        setShowVotesModal(true);
+    };
+
+    const handleOpenHelpfulModal = () => {
+        setShowHelpfulModal(true);
+    };
+
+    const handleOpenNotRelevantModal = () => {
+        setShowNotRelevantModal(true);
+    };
+
+    const handleOpenRelevanceScoreModal = () => {
+        setShowRelevanceScoreModal(true);
+    };
+
+    const handleOpenTopRatedModal = () => {
+        setShowTopRatedModal(true);
+    };
+
+    const handleOpenTopicMaterialsModal = async (topicItem) => {
+        // topicItem: { subject, current_views, prev_views, growth }
+        const { from, to } = getDateRange();
+        if (overviewDateFilterType === 'Custom range' && (!from || !to)) return;
+        try {
+            const limit = Math.max(dashboardData.kpi?.totalDocuments || 500, 500);
+            const res = await fetch(`${API_BASE_URL}/dashboard/top-theses/?from=${from}&to=${to}&limit=${limit}`, {
+                headers: apiHeaders(true)
+            });
+            if (!res.ok) {
+                console.error('Failed to fetch materials for topic modal');
+                showToast('Failed to load materials for this topic', 'error');
+                return;
+            }
+            const data = await res.json();
+            const mats = (data.materials || []).filter(m => {
+                if (!m.subjects || !Array.isArray(m.subjects)) return false;
+                return m.subjects.map(s => (s || '').toLowerCase().trim()).includes((topicItem.subject || '').toLowerCase().trim());
+            });
+            mats.sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
+            setSelectedTopicName(topicItem.subject || 'Topic');
+            setSelectedTopicViewCount(topicItem.current_views || 0);
+            setTopicMaterials(mats);
+            setShowTopicMaterialsModal(true);
+        } catch (err) {
+            console.error('Error fetching topic materials', err);
+            showToast('Failed to load materials for this topic', 'error');
+        }
+    };
+
+    const handleCloseTopicMaterialsModal = () => {
+        setShowTopicMaterialsModal(false);
+        setSelectedTopicName('');
+        setTopicMaterials([]);
+        setSelectedTopicViewCount(0);
+    };
+
+    const handleOpenAllThesesModal = async () => {
+        const { from, to } = getDateRange();
+        if (overviewDateFilterType === 'Custom range' && (!from || !to)) return;
+        setAllThesesLoading(true);
+        setShowAllThesesModal(true);
+        try {
+            const limit = Math.max(dashboardData.kpi?.totalDocuments || 500, 500);
+            const res = await fetch(`${API_BASE_URL}/dashboard/top-theses/?from=${from}&to=${to}&limit=${limit}`, {
+                headers: apiHeaders(true)
+            });
+            if (!res.ok) {
+                console.error('Failed to fetch full theses list');
+                showToast('Failed to load full theses list', 'error');
+                return;
+            }
+            const data = await res.json();
+            setAllTheses(data.materials || []);
+        } catch (err) {
+            console.error('Error fetching all theses', err);
+            showToast('Failed to load full theses list', 'error');
+        } finally {
+            setAllThesesLoading(false);
+        }
+    };
+
+    const handleCloseAllThesesModal = () => {
+        setShowAllThesesModal(false);
+        setAllTheses([]);
+    };
+
+    const handleOpenGenderDetailModal = (genderItem) => {
+        setSelectedGenderItem(genderItem);
+        setShowGenderDetailModal(true);
+    };
+
+    const handleCloseGenderDetailModal = () => {
+        setShowGenderDetailModal(false);
+        setSelectedGenderItem(null);
+    };
+
+    const handleOpenAllFailedQueriesModal = async () => {
+        const { from, to } = getDateRange();
+        if (overviewDateFilterType === 'Custom range' && (!from || !to)) return;
+        setAllFailedQueriesLoading(true);
+        setShowAllFailedQueriesModal(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/dashboard/failed-queries-details/?from=${from}&to=${to}&limit=500`, {
+                headers: apiHeaders(true)
+            });
+            if (!res.ok) {
+                console.error('Failed to fetch full failed queries list');
+                showToast('Failed to load full failed queries list', 'error');
+                return;
+            }
+            const data = await res.json();
+            setAllFailedQueries(data.failed_queries || []);
+        } catch (err) {
+            console.error('Error fetching all failed queries', err);
+            showToast('Failed to load full failed queries list', 'error');
+        } finally {
+            setAllFailedQueriesLoading(false);
+        }
+    };
+
+    const handleCloseAllFailedQueriesModal = () => {
+        setShowAllFailedQueriesModal(false);
+        setAllFailedQueries([]);
+    };
+
+    const handleOpenActivityTrendDetailModal = async (item) => {
+        const { from, to } = getTrendBarDateRange(item);
+        console.log('Activity trend bucket item:', item);
+        console.log('Computed from/to:', from, to);
+        if (!from || !to) {
+            showToast('Date details unavailable for this period', 'error');
+            return;
+        }
+        setSelectedActivityBucket(item);
+        setActivityBucketLoading(true);
+        setShowActivityTrendDetailModal(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/dashboard/top-theses/?from=${from}&to=${to}&limit=500`, {
+                headers: apiHeaders(true)
+            });
+            if (!res.ok) {
+                console.error('Failed to fetch materials for this period');
+                showToast('Failed to load materials for this period', 'error');
+                return;
+            }
+            const data = await res.json();
+            const mats = (data.materials || []).sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
+            setActivityBucketMaterials(mats);
+        } catch (err) {
+            console.error('Error fetching activity bucket materials', err);
+            showToast('Failed to load materials for this period', 'error');
+        } finally {
+            setActivityBucketLoading(false);
+        }
+    };
+
+    const handleCloseActivityTrendDetailModal = () => {
+        setShowActivityTrendDetailModal(false);
+        setSelectedActivityBucket(null);
+        setActivityBucketMaterials([]);
+    };
+
+    const handleOpenCitationDetailModal = async (item) => {
+        const { from, to } = getCitationPointDateRange(item);
+        if (!from || !to) {
+            showToast('Date details unavailable for this period', 'error');
+            return;
+        }
+        setSelectedCitationBucket(item);
+        setCitationBucketLoading(true);
+        setShowCitationDetailModal(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/dashboard/citation-stats/?from=${from}&to=${to}`, {
+                headers: apiHeaders(true)
+            });
+            if (!res.ok) {
+                console.error('Failed to fetch citation details');
+                showToast('Failed to load citation details for this period', 'error');
+                return;
+            }
+            const data = await res.json();
+            setCitationBucketMaterials(data.top_cited || []);
+        } catch (err) {
+            console.error('Error fetching citation details', err);
+            showToast('Failed to load citation details for this period', 'error');
+        } finally {
+            setCitationBucketLoading(false);
+        }
+    };
+
+    const handleCloseCitationDetailModal = () => {
+        setShowCitationDetailModal(false);
+        setSelectedCitationBucket(null);
+        setCitationBucketMaterials([]);
+    };
+
+    const handleRequestArchive = (material) => {
+        setArchiveTargetMaterial(material);
+        setShowArchiveConfirmModal(true);
+    };
+
+    const handleConfirmArchivePlaceholder = () => {
+        // UI-only placeholder: actual backend archive endpoint not implemented
+        setShowArchiveConfirmModal(false);
+        setArchiveTargetMaterial(null);
+        showToast('Archive feature coming soon', 'info');
+    };
+
+    const handleCancelArchive = () => {
+        setShowArchiveConfirmModal(false);
+        setArchiveTargetMaterial(null);
+    };
+
+    const formatVoteDate = (dateString) => {
+        try {
+            return new Date(dateString).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        } catch {
+            return dateString;
+        }
+    };
+
+    const getVoteTypeLabel = (vote) => {
+        if (vote.relevant === true) return 'Helpful';
+        if (vote.relevant === false) return 'Not Relevant';
+        return 'Unknown';
+    };
+
+    const getVoteComment = (vote) => {
+        return vote.message_comment || vote.comment || vote.note || vote.notes || '—';
+    };
+
+    const getTrendBucketVotes = (bucket) => {
+        if (!bucket) return [];
+        return filteredRatings
+            .filter(r => {
+                const d = new Date(r.created_at);
+                return d >= bucket.start && d <= bucket.end;
+            })
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    };
+
+    const handleOpenTrendDetailModal = (bucket) => {
+        setSelectedTrendBucket(bucket);
+        setShowRatingTrendDetailModal(true);
+    };
+
+    const handleCloseTrendDetailModal = () => {
+        setShowRatingTrendDetailModal(false);
+        setSelectedTrendBucket(null);
+    };
+
     const formatDormantDate = (value, options = { year: 'numeric', month: 'short', day: 'numeric' }) => {
         if (!value) return 'Never';
         const date = new Date(value);
@@ -2996,6 +3422,121 @@ const AdminDashboard = () => {
         } catch (error) {
             console.error("Dormant materials PDF export failed:", error);
             showToast('Failed to export dormant materials to PDF. Please try again.', 'error');
+        }
+    };
+
+    const handleTopRatedExportCSV = () => {
+        try {
+            if (!topRatedMaterials || topRatedMaterials.length === 0) {
+                showToast('No top rated materials to export', 'error');
+                return;
+            }
+
+            const rows = [];
+            const exportDate = new Date().toLocaleDateString();
+
+            const escape = (text) => {
+                if (text === null || text === undefined) return '';
+                const str = String(text);
+                return `"${str.replace(/"/g, '""')}"`;
+            };
+
+            const getLocalDateString = () => {
+                const d = new Date();
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            // Header
+            rows.push(["LITPATH AI - TOP RATED MATERIALS REPORT"]);
+            rows.push(["Export Date", exportDate]);
+            rows.push(["Total Materials", topRatedMaterials.length]);
+            rows.push([]);
+
+            // Columns
+            rows.push(["Title", "Helpful Votes", "Not Relevant Votes", "Total Votes", "Relevance %"]);
+
+            topRatedMaterials.forEach(item => {
+                rows.push([
+                    escape(item.title || ''),
+                    escape(item.helpful || 0),
+                    escape(item.notRelevant || 0),
+                    escape(item.total || 0),
+                    escape(item.relevanceRounded != null ? item.relevanceRounded + '%' : '')
+                ]);
+            });
+
+            const csvContent = rows.map(row => row.join(',')).join('\r\n');
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `LitPathAI_TopRatedMaterials_${getLocalDateString()}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            showToast('Top rated materials exported to CSV successfully!', 'success');
+        } catch (error) {
+            console.error('Top rated CSV export failed:', error);
+            showToast('Failed to export top rated materials. Please try again.', 'error');
+        }
+    };
+
+    const handleTopRatedExportPDF = async () => {
+        try {
+            if (!topRatedMaterials || topRatedMaterials.length === 0) {
+                showToast('No top rated materials to export', 'error');
+                return;
+            }
+
+            const { jsPDF } = await import('jspdf');
+            const { default: autoTable } = await import('jspdf-autotable');
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.width;
+            let yPos = 20;
+
+            const sanitizeText = (text) => {
+                if (!text) return '';
+                return String(text)
+                    .replace(/º/g, 'o')
+                    .replace(/ª/g, 'a')
+                    .replace(/°/g, 'o')
+                    .replace(/²/g, '^2')
+                    .replace(/³/g, '^3')
+                    .replace(/¹/g, '^1');
+            };
+
+            doc.setFontSize(12);
+            doc.text(sanitizeText('LITPATH AI - TOP RATED MATERIALS REPORT'), pageWidth / 2, yPos, { align: 'center' });
+            yPos += 8;
+            doc.text(`Total Materials: ${topRatedMaterials.length}`, 14, yPos);
+            yPos += 8;
+
+            const body = topRatedMaterials.map(item => [
+                item.title || '',
+                String(item.helpful || 0),
+                String(item.notRelevant || 0),
+                String(item.total || 0),
+                String(item.relevanceRounded != null ? item.relevanceRounded + '%' : '')
+            ]);
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [[ 'Title', 'Helpful', 'Not Relevant', 'Total', 'Relevance %' ]],
+                body: body,
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [30,116,188] }
+            });
+
+            doc.save(`LitPathAI_TopRatedMaterials_${new Date().toISOString().slice(0,10)}.pdf`);
+            showToast('Top rated materials exported to PDF successfully!', 'success');
+        } catch (error) {
+            console.error('Top rated PDF export failed:', error);
+            showToast('Failed to export top rated materials to PDF. Please try again.', 'error');
         }
     };
 
@@ -3931,7 +4472,19 @@ const AdminDashboard = () => {
                                                         const maxViews = Math.max(...dashboardData.trendingTopics.map(t => t.current_views), 1);
                                                         const barWidth = (item.current_views / maxViews) * 100;
                                                         return (
-                                                            <div key={i} className="flex flex-col gap-1">
+                                                            <div
+                                                                key={i}
+                                                                role="button"
+                                                                tabIndex={0}
+                                                                onClick={() => handleOpenTopicMaterialsModal(item)}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                                        e.preventDefault();
+                                                                        handleOpenTopicMaterialsModal(item);
+                                                                    }
+                                                                }}
+                                                                className="flex flex-col gap-1 cursor-pointer group/topic rounded-md px-1 py-0.5 -mx-1 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-[#1E74BC] focus:ring-offset-1 transition-colors"
+                                                            >
                                                                 <div className="flex justify-between items-center text-xs">
                                                                     <span className="font-medium text-gray-700 truncate max-w-[60%]" title={item.subject}>
                                                                         {i+1}. {item.subject}
@@ -3949,6 +4502,9 @@ const AdminDashboard = () => {
                                                                         style={{ width: `${barWidth}%` }}
                                                                     />
                                                                 </div>
+                                                                <span className="text-[10px] text-[#1E74BC] font-semibold opacity-0 group-hover/topic:opacity-100 transition-opacity">
+                                                                    Click to view materials
+                                                                </span>
                                                             </div>
                                                         );
                                                     })
@@ -3960,19 +4516,27 @@ const AdminDashboard = () => {
 
                                         {/* Top Failed Queries */}
                                         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1">
-                                            <div className="flex items-center gap-1 mb-3">
-                                                <h3 className="font-bold text-gray-700 text-xs uppercase tracking-wide flex items-center gap-2">
-                                                    <AlertCircle size={16} className="text-red-600" /> Top Failed Queries
-                                                </h3>
-                                                <div className="relative group">
-                                                    <Info size={14} className="text-gray-400 cursor-help hover:text-gray-600" />
-                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none w-48">
-                                                        <div className="bg-gray-800 text-white text-[10px] px-3 py-2 rounded shadow-lg text-center">
-                                                            Specific keywords/queries that returned zero results.
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-1">
+                                                    <h3 className="font-bold text-gray-700 text-xs uppercase tracking-wide flex items-center gap-2">
+                                                        <AlertCircle size={16} className="text-red-600" /> Top Failed Queries
+                                                    </h3>
+                                                    <div className="relative group">
+                                                        <Info size={14} className="text-gray-400 cursor-help hover:text-gray-600" />
+                                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none w-48">
+                                                            <div className="bg-gray-800 text-white text-[10px] px-3 py-2 rounded shadow-lg text-center">
+                                                                Specific keywords/queries that returned zero results.
+                                                            </div>
+                                                            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-gray-800"></div>
                                                         </div>
-                                                        <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-gray-800"></div>
                                                     </div>
                                                 </div>
+                                                <button
+                                                    onClick={handleOpenAllFailedQueriesModal}
+                                                    className="text-[12px] font-semibold text-[#1E74BC] hover:text-[#155a8f] hover:underline transition-colors"
+                                                >
+                                                    View all
+                                                </button>
                                             </div>
                                             {dashboardData.failedQueries && dashboardData.failedQueries.length > 0 ? (
                                                 <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
@@ -3991,19 +4555,27 @@ const AdminDashboard = () => {
 
                                     {/* COL 2: MOST VIEWED THESES - LEADERBOARD STYLE (50%) */}
                                     <div className="col-span-12 lg:col-span-6 bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex flex-col overflow-visible">
-                                        <div className="flex items-center gap-1 mb-4">
-                                            <h3 className="font-bold text-gray-700 text-xs uppercase tracking-wide flex items-center gap-2">
-                                                <BookOpen size={16} className="text-purple-600" /> Most Viewed Theses
-                                            </h3>
-                                            <div className="relative group">
-                                                <Info size={14} className="text-gray-400 cursor-help hover:text-gray-600" />
-                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none w-56">
-                                                    <div className="bg-gray-800 text-white text-[10px] px-3 py-2 rounded shadow-lg text-center">
-                                                        Ranked by number of views within the selected date range.
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-1">
+                                                <h3 className="font-bold text-gray-700 text-xs uppercase tracking-wide flex items-center gap-2">
+                                                    <BookOpen size={16} className="text-purple-600" /> Most Viewed Theses
+                                                </h3>
+                                                <div className="relative group">
+                                                    <Info size={14} className="text-gray-400 cursor-help hover:text-gray-600" />
+                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none w-56">
+                                                        <div className="bg-gray-800 text-white text-[10px] px-3 py-2 rounded shadow-lg text-center">
+                                                            Ranked by number of views within the selected date range.
+                                                        </div>
+                                                        <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-gray-800"></div>
                                                     </div>
-                                                    <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-gray-800"></div>
                                                 </div>
                                             </div>
+                                            <button
+                                                onClick={handleOpenAllThesesModal}
+                                                className="text-[12px] font-semibold text-[#1E74BC] hover:text-[#155a8f] hover:underline transition-colors"
+                                            >
+                                                View all
+                                            </button>
                                         </div>
                                         <div className="flex-1 flex flex-col gap-2 overflow-hidden">
                                             {dashboardData.topTheses.slice(0, 8).map((item, i) => (
@@ -4027,7 +4599,7 @@ const AdminDashboard = () => {
                                                         title={item.title}>
                                                             {item.title}
                                                         </p>
-                                                        <p className="text-[10px] text-gray-500 truncate mt-0.5">{item.author || 'Unknown Author'}</p>
+                                                        <p className="text-[11px] text-gray-500 truncate mt-2">{item.author || 'Unknown Author'}</p>
                                                     </div>
 
                                                     {/* Views */}
@@ -4065,109 +4637,176 @@ const AdminDashboard = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="space-y-3">
-                                                {dashboardData.usageByCategory.length > 0 ? (
-                                                    dashboardData.usageByCategory.map((cat, i) => {
-                                                        // Determine icon
-                                                        const Icon = cat.category.includes('Student') ? GraduationCap : 
-                                                                    cat.category.includes('DOST') ? Briefcase : 
-                                                                    cat.category.includes('Librarian') ? BookOpen : Users;
-                                                        return (
-                                                            <div key={i} className="flex flex-col gap-1">
-                                                                <div className="flex justify-between items-center text-xs">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <Icon size={12} className="text-gray-500" />
-                                                                        <span className="font-medium text-gray-700">{cat.category}</span>
+
+                                            {dashboardData.usageByCategory.length > 0 ? (() => {
+                                                const totalUsers = dashboardData.usageByCategory.reduce((sum, c) => sum + (c.views || 0), 0);
+                                                const topCategory = [...dashboardData.usageByCategory].sort((a, b) => (b.views || 0) - (a.views || 0))[0];
+                                                const zeroCategories = dashboardData.usageByCategory.filter(c => (c.views || 0) === 0);
+
+                                                return (
+                                                    <>
+                                                        <div className="bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 mb-4">
+                                                            <p className="text-xs text-indigo-900">
+                                                                <span className="font-bold">{totalUsers}</span> total users
+                                                                {topCategory && topCategory.views > 0 && (
+                                                                    <> — mostly <span className="font-semibold">{topCategory.category}</span> ({topCategory.views})</>
+                                                                )}
+                                                                {zeroCategories.length > 0 && (
+                                                                    <> · {zeroCategories.length} categor{zeroCategories.length === 1 ? 'y' : 'ies'} with no users yet</>
+                                                                )}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="space-y-5">
+                                                            {dashboardData.usageByCategory.map((cat, i) => {
+                                                                const Icon = cat.category.includes('Student') ? GraduationCap :
+                                                                            cat.category.includes('DOST') ? Briefcase :
+                                                                            cat.category.includes('Librarian') ? BookOpen : Users;
+                                                                return (
+                                                                    <div key={i} className="flex flex-col gap-1">
+                                                                        <div className="flex justify-between items-center text-xs">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Icon size={12} className="text-gray-500" />
+                                                                                <span className="font-medium text-gray-700">{cat.category}</span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <span className="font-semibold text-gray-900">{cat.views || 0}</span>
+                                                                                <span className="text-[10px] text-gray-400">({cat.percentage}%)</span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                                            <div
+                                                                                className="h-full bg-indigo-500 rounded-full"
+                                                                                style={{ width: `${cat.percentage}%` }}
+                                                                            />
+                                                                        </div>
                                                                     </div>
-                                                                    <span className="font-semibold text-gray-900">{cat.percentage}%</span>
-                                                                </div>
-                                                                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                                    <div 
-                                                                        className="h-full bg-indigo-500 rounded-full"
-                                                                        style={{ width: `${cat.percentage}%` }}
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })
-                                                ) : (
-                                                    <p className="text-xs text-gray-400 italic">No user data.</p>
-                                                )}
-                                            </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </>
+                                                );
+                                            })() : (
+                                                <p className="text-xs text-gray-400 italic">No user data.</p>
+                                            )}
                                         </div>
 
                                         {/* Gender Distribution */}
                                         <div ref={genderDistributionChartRef} className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1">
-                                            <div className="flex items-center gap-1 mb-3">
-                                                <h3 className="font-bold text-gray-700 text-xs uppercase tracking-wide flex items-center gap-2">
-                                                    <Users size={16} className="text-purple-600" /> Gender Distribution
-                                                </h3>
-                                                <div className="relative group">
-                                                    <Info size={14} className="text-gray-400 cursor-help hover:text-gray-600" />
-                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none w-56">
-                                                        <div className="bg-gray-800 text-white text-[10px] px-3 py-2 rounded shadow-lg text-center">
-                                                            Gender breakdown of users who registered and submitted feedback.
+                                            <div className="mb-3">
+                                                <div className="flex items-center gap-1">
+                                                    <h3 className="font-bold text-gray-700 text-xs uppercase tracking-wide flex items-center gap-2">
+                                                        <Users size={16} className="text-purple-600" /> Gender Distribution
+                                                    </h3>
+                                                    <div className="relative group">
+                                                        <Info size={14} className="text-gray-400 cursor-help hover:text-gray-600" />
+                                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none w-56">
+                                                            <div className="bg-gray-800 text-white text-[10px] px-3 py-2 rounded shadow-lg text-center">
+                                                                Gender breakdown of users who registered and submitted feedback.
+                                                            </div>
+                                                            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-gray-800"></div>
                                                         </div>
-                                                        <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-gray-800"></div>
                                                     </div>
                                                 </div>
+                                                <p className="text-[10px] italic text-gray-400 mt-0.5">Click a segment to view details</p>
                                             </div>
                                             {(() => {
-                                                // Filter to only genders with data, sort by count descending
                                                 const gendersWithData = dashboardData.genderDistribution
                                                     .filter(g => g.count > 0)
                                                     .sort((a, b) => b.count - a.count);
                                                 const total = dashboardData.genderDistribution.reduce((sum, g) => sum + g.count, 0);
 
-                                                const colorPalette = [
-                                                    '#3b82f6', '#ef4444', '#f97316'
-                                                ];
+                                                const colorPalette = ['#3b82f6', '#ef4444', '#f97316'];
 
                                                 if (gendersWithData.length === 0) {
                                                     return <p className="text-xs text-gray-400 italic">No records yet</p>;
                                                 }
 
+                                                // Build segments with start/end angles (0-360) for both gradient and SVG hit areas
                                                 let cumulativePercent = 0;
-                                                const gradientStops = gendersWithData.map((item, i) => {
+                                                const segments = gendersWithData.map((item, i) => {
                                                     const percentage = (item.count / total) * 100;
-                                                    const start = cumulativePercent;
+                                                    const startPercent = cumulativePercent;
                                                     cumulativePercent += percentage;
-                                                    const color = colorPalette[i % colorPalette.length];
-                                                    return `${color} ${start}% ${cumulativePercent}%`;
-                                                }).join(', ');
+                                                    const endPercent = cumulativePercent;
+                                                    return {
+                                                        ...item,
+                                                        color: colorPalette[i % colorPalette.length],
+                                                        startPercent,
+                                                        endPercent,
+                                                        startAngle: startPercent * 3.6,
+                                                        endAngle: endPercent * 3.6
+                                                    };
+                                                });
+
+                                                const gradientStops = segments.map(s => `${s.color} ${s.startPercent}% ${s.endPercent}%`).join(', ');
+
+                                                // Convert angle (0-360, starting at top, clockwise) to SVG path sector
+                                                const getSectorPath = (startAngle, endAngle, outerRadius = 16, innerRadius = 0) => {
+                                                    const toRad = (deg) => (deg - 90) * (Math.PI / 180);
+                                                    const startRad = toRad(startAngle);
+                                                    const endRad = toRad(endAngle);
+                                                    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+                                                    const x1 = 16 + outerRadius * Math.cos(startRad);
+                                                    const y1 = 16 + outerRadius * Math.sin(startRad);
+                                                    const x2 = 16 + outerRadius * Math.cos(endRad);
+                                                    const y2 = 16 + outerRadius * Math.sin(endRad);
+                                                    return `M 16 16 L ${x1} ${y1} A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+                                                };
 
                                                 return (
-                                                    <div className="flex flex-col items-center gap-4 w-full">
-                                                        {/* Donut chart */}
+                                                    <div className="flex flex-col items-center gap-5 w-full justify-center h-full">
+                                                        {/* Donut chart with clickable overlay */}
                                                         <div className="relative w-32 h-32 flex-shrink-0">
                                                             <div
-                                                                className="w-full h-full rounded-full"
+                                                                className="w-full h-full rounded-full transition-all"
                                                                 style={{
                                                                     background: `conic-gradient(${gradientStops})`,
                                                                     mask: 'radial-gradient(circle at 50% 50%, transparent 50%, black 51%)',
-                                                                    WebkitMask: 'radial-gradient(circle at 50% 50%, transparent 50%, black 51%)'
+                                                                    WebkitMask: 'radial-gradient(circle at 50% 50%, transparent 50%, black 51%)',
+                                                                    filter: hoveredGenderSegment !== null ? 'brightness(1.05)' : 'none'
                                                                 }}
                                                             />
-                                                            <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">
+                                                            <svg viewBox="0 0 32 32" className="absolute inset-0 w-full h-full">
+                                                                {segments.map((seg, i) => (
+                                                                    <path
+                                                                        key={i}
+                                                                        d={getSectorPath(seg.startAngle, seg.endAngle)}
+                                                                        fill="transparent"
+                                                                        stroke="transparent"
+                                                                        pointerEvents="all"
+                                                                        onMouseEnter={() => setHoveredGenderSegment(i)}
+                                                                        onMouseLeave={() => setHoveredGenderSegment(null)}
+                                                                        onClick={() => handleOpenGenderDetailModal(seg)}
+                                                                        style={{ cursor: 'pointer' }}
+                                                                    />
+                                                                ))}
+                                                            </svg>
+                                                            <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700 pointer-events-none">
                                                                 {total} total
                                                             </div>
                                                         </div>
                                                         {/* Legend */}
-                                                        <div className="w-full space-y-1 max-h-40 overflow-y-auto pr-1">
-                                                            {gendersWithData.map((item, i) => {
-                                                                const color = colorPalette[i % colorPalette.length];
-                                                                return (
-                                                                    <div key={i} className="flex items-center gap-2 text-[10px]">
-                                                                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-                                                                        <span className="flex-1 truncate" title={item.gender}>
-                                                                            {item.gender}
-                                                                        </span>
-                                                                        <span className="font-semibold text-gray-700">
-                                                                            {item.count} ({item.percentage}%)
-                                                                        </span>
-                                                                    </div>
-                                                                );
-                                                            })}
+                                                        <div className="w-full space-y-2 max-h-40 overflow-y-auto pr-1">
+                                                            {segments.map((item, i) => (
+                                                                <div
+                                                                    key={i}
+                                                                    onClick={() => handleOpenGenderDetailModal(item)}
+                                                                    onMouseEnter={() => setHoveredGenderSegment(i)}
+                                                                    onMouseLeave={() => setHoveredGenderSegment(null)}
+                                                                    className={`flex items-center gap-2 text-xs cursor-pointer rounded px-2 py-1.5 -mx-1 transition-colors ${
+                                                                        hoveredGenderSegment === i ? 'bg-purple-50 font-semibold' : ''
+                                                                    }`}
+                                                                >
+                                                                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                                                                    <span className="flex-1 truncate" title={item.gender}>
+                                                                        {item.gender}
+                                                                    </span>
+                                                                    <span className="font-semibold text-gray-700">
+                                                                        {item.count} ({item.percentage}%)
+                                                                    </span>
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     </div>
                                                 );
@@ -4208,6 +4847,7 @@ const AdminDashboard = () => {
                                                         `(Material views summary from ${new Date(overviewCustomFrom).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} to ${new Date(overviewCustomTo).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`
                                                     }
                                                 </span>
+                                                
                                             </div>
                                         </div>
 
@@ -4218,7 +4858,8 @@ const AdminDashboard = () => {
                                             return dashboardData.trends && dashboardData.trends.length > 0 ? (
                                                 <>
                                                     <p className="text-2xl font-bold text-gray-900">{formatNumber(totalActivityViews)}</p>
-                                                    <p className="text-xs text-gray-500 mb-2">total material views in this period</p>
+                                                    <p className="text-xs text-gray-500 mb-2">total material views in this period. <p className="text-[10px] italic text-gray-400 mt-1">Click a bar to view materials from that period</p></p>
+                                                    
 
                                                     {(() => {
                                                         const max = Math.max(...dashboardData.trends.map(t => t.views), 1);
@@ -4302,7 +4943,11 @@ const AdminDashboard = () => {
 
                                                                                 return (
                                                                                     /* hover:z-50 makes sure the active tooltip is ALWAYS on top of neighboring bars */
-                                                                                    <div key={i} className="flex-1 flex flex-col items-center justify-end h-full group cursor-default relative hover:z-50">
+                                                                                    <div
+                                                                                        key={i}
+                                                                                        onClick={() => handleOpenActivityTrendDetailModal(item)}
+                                                                                        className="flex-1 flex flex-col items-center justify-end h-full group cursor-pointer relative hover:z-50"
+                                                                                    >
                                                                                         
                                                                                         {/* Ghost Background Track */}
                                                                                         <div className="absolute inset-y-0 bottom-0 w-full max-w-[32px] bg-blue-500/0 group-hover:bg-blue-500/10 transition-colors rounded-t-sm z-0"></div>
@@ -4377,7 +5022,7 @@ const AdminDashboard = () => {
                                         {dashboardData.citationStats.total_copies > 0 ? (
                                             <>
                                                 <p className="text-2xl font-bold text-gray-900">{formatNumber(dashboardData.citationStats.total_copies)}</p>
-                                                <p className="text-xs text-gray-500 mb-2">total citation copies in this period</p>
+                                                <p className="text-xs text-gray-500 mb-2">total citation copies in this period <p className="text-[10px] italic text-gray-400 mt-1">Click a point to view citation details from that period</p></p>
 
                                                 {(() => {
                                                     const max = Math.max(...dashboardData.citationTrends.map(m => m.copies), 1);
@@ -4452,7 +5097,11 @@ const AdminDashboard = () => {
 
                                                                             return (
                                                                                 /* hover:z-50 brings the hovered point to the very front */
-                                                                                <div key={`hover-${i}`} className="flex-1 relative group cursor-default h-full flex justify-center hover:z-50">
+                                                                                <div
+                                                                                    key={`hover-${i}`}
+                                                                                    onClick={() => handleOpenCitationDetailModal(p)}
+                                                                                    className="flex-1 relative group cursor-pointer h-full flex justify-center hover:z-50"
+                                                                                >
                                                                                     
                                                                                     {/* Ghost Hover Highlight Area */}
                                                                                     <div className="absolute inset-y-0 w-[80%] max-w-[32px] z-0 bg-red-500/0 group-hover:bg-red-500/10 transition-colors rounded-sm"></div>
@@ -5175,7 +5824,18 @@ const AdminDashboard = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mt-3">
                                 
                                 {/* Total Votes */}
-                                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                                <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={handleOpenVotesModal}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleOpenVotesModal();
+                                        }
+                                    }}
+                                    className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group"
+                                >
                                     <div className="flex items-center gap-1">
                                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
                                             <MessageSquare size={18} className="text-blue-600" /> Total Votes
@@ -5191,6 +5851,7 @@ const AdminDashboard = () => {
                                         </div>
                                     </div>
                                     <p className="text-2xl font-bold text-gray-900 mt-2">{formatNumber(currentVotes)}</p>
+                                    <p className="text-xs text-gray-500 mt-1">Total number of votes for both helpful and not relevant</p>
                                     {voteTrend !== null && (
                                         <div className="flex items-center text-xs text-gray-500 mt-1">
                                             <span className={`font-bold mr-1 ${voteTrend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -5199,10 +5860,24 @@ const AdminDashboard = () => {
                                             from {trendLabel}
                                         </div>
                                     )}
+                                    <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-blue-600">
+                                        Click to view
+                                    </div>
                                 </div>
 
                                 {/* Relevance Score */}
-                                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                                <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={handleOpenRelevanceScoreModal}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleOpenRelevanceScoreModal();
+                                        }
+                                    }}
+                                    className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group"
+                                >
                                     <div className="flex items-center gap-1">
                                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
                                             <Star size={18} className="text-yellow-500" /> Relevance Score
@@ -5219,15 +5894,32 @@ const AdminDashboard = () => {
                                     </div>
                                     <div className="flex items-baseline gap-2 mt-2">
                                         <p className="text-2xl font-bold text-gray-900">{getRelevanceScore()}%</p>
-                                        <span className="text-xs text-gray-400">satisfaction</span>
+                                        <span className="text-xs text-gray-400">helpful vote rate</span>
                                     </div>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {helpfulCount} relevant material vote{helpfulCount !== 1 ? 's' : ''}
+                                    </p>
                                     <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
                                         <div className="bg-gradient-to-r from-yellow-400 to-orange-500 h-1.5 rounded-full" style={{ width: `${getRelevanceScore()}%` }}></div>
+                                    </div>
+                                    <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-blue-600">
+                                        Click to view
                                     </div>
                                 </div>
 
                                 {/* Helpful */}
-                                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                                <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={handleOpenHelpfulModal}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleOpenHelpfulModal();
+                                        }
+                                    }}
+                                    className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group relative"
+                                >
                                     <div className="flex items-center gap-1">
                                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
                                             <ThumbsUp size={18} className="text-green-600" /> Helpful
@@ -5236,16 +5928,19 @@ const AdminDashboard = () => {
                                             <Info size={14} className="text-gray-400 cursor-help hover:text-gray-600" />
                                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none w-48">
                                                 <div className="bg-gray-800 text-white text-[10px] px-3 py-2 rounded shadow-lg text-center">
-                                                    Number of materials rated as relevant.
+                                                    Same material voted as relevant.
                                                 </div>
                                                 <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-gray-800"></div>
                                             </div>
                                         </div>
                                     </div>
                                     <p className="text-2xl font-bold text-green-600 mt-2">
-                                        {filteredRatings.filter(r => r.relevant === true).length}
+                                        {helpfulCount}
                                     </p>
-                                    <p className="text-xs text-gray-400 mt-1">Rated as relevant</p>
+                                    <p className="text-xs text-gray-400 mt-1">Same material voted as relevant</p>
+                                    <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-blue-600">
+                                        Click to view
+                                    </div>
                                 </div>
 
                                 {/* Dormant Materials */}
@@ -5261,8 +5956,9 @@ const AdminDashboard = () => {
                                             handleOpenDormantMaterialsModal();
                                         }
                                     }}
+
                                     title="Open dormant materials KPI details"
-                                    className="group bg-white p-4 rounded-lg shadow-sm border border-blue-100 cursor-pointer hover:shadow-md hover:border-[#1E74BC] hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-[#1E74BC] focus:ring-offset-2 transition-all"
+                                    className="group relative bg-white p-4 rounded-lg shadow-sm border border-blue-100 cursor-pointer hover:shadow-md hover:border-[#1E74BC] hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-[#1E74BC] focus:ring-offset-2 transition-all"
                                 >
                                     <div className="flex items-center justify-between gap-2">
                                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
@@ -5288,8 +5984,10 @@ const AdminDashboard = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="mt-3 h-1.5 rounded-full bg-blue-100 overflow-hidden">
-                                        <div className="h-full w-full bg-[#1E74BC] rounded-full opacity-80 group-hover:opacity-100"></div>
+                                    <p className="text-2xl font-bold text-gray-900 mt-2">{formatNumber(dormantCount)}</p>
+                                    <p className="text-xs text-gray-400 mt-1">Dormant (30+ days)</p>
+                                    <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-blue-600">
+                                        Click to view
                                     </div>
                                 </div>
                             </div>
@@ -5298,12 +5996,26 @@ const AdminDashboard = () => {
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
 
                                 {/* 1. Top Rated Materials */}
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col h-full">
+                                <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={handleOpenTopRatedModal}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleOpenTopRatedModal();
+                                        }
+                                    }}
+                                    className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col h-full cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group"
+                                >
                                     <div className="flex items-center gap-1.5 mb-2 border-b border-gray-100 pb-3">
-                                        <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
-                                            <ThumbsUp size={16} className="text-blue-600" />
-                                            Top Rated Materials
-                                        </h3>
+                                        <div>
+                                            <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                                                <ThumbsUp size={16} className="text-blue-600" />
+                                                Top Rated Materials
+                                            </h3>
+                                            <p className="text-sm text-gray-500 italic mt-1">Click to view full ranked list</p>
+                                        </div>
                                         <div className="relative group">
                                             <Info size={14} className="text-gray-400 cursor-help hover:text-gray-600" />
                                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none w-64">
@@ -5414,13 +6126,22 @@ const AdminDashboard = () => {
                                                                             Dormant
                                                                         </span>
                                                                     )}
+                                                                    
                                                                 </div>
                                                             </div>
                                                         </div>
                                                         <div className="flex-shrink-0 text-right pl-2 mt-0.5">
-                                                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-[10px] font-bold border border-gray-200 inline-block">
+                                                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-[10px] font-bold border border-gray-200 inline-block group-hover:hidden">
                                                                 {item.view_count || 0} views
                                                             </span>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleRequestArchive(item); }}
+                                                                title="Archive material"
+                                                                className="hidden group-hover:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500 text-white text-xs font-semibold"
+                                                            >
+                                                                <Archive size={14} />
+                                                                Archive
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -5459,29 +6180,90 @@ const AdminDashboard = () => {
                                                 {/* Donut with centered total */}
                                                 <div className="relative w-32 h-32 flex-shrink-0">
                                                     <div
-                                                        className="w-full h-full rounded-full"
+                                                        className="w-full h-full rounded-full transition"
                                                         style={{
                                                             background: `conic-gradient(#22c55e 0% ${helpfulPercent}%, #ef4444 ${helpfulPercent}% 100%)`,
                                                             mask: 'radial-gradient(circle at 50% 50%, transparent 50%, black 51%)',
-                                                            WebkitMask: 'radial-gradient(circle at 50% 50%, transparent 50%, black 51%)'
+                                                            WebkitMask: 'radial-gradient(circle at 50% 50%, transparent 50%, black 51%)',
+                                                            filter: hoveredSegment === 'helpful'
+                                                                ? 'brightness(1.04) drop-shadow(0 0 14px rgba(34,197,94,0.18))'
+                                                                : hoveredSegment === 'notRelevant'
+                                                                    ? 'brightness(1.04) drop-shadow(0 0 14px rgba(239,68,68,0.18))'
+                                                                    : 'none',
+                                                            transform: hoveredSegment ? 'scale(1.02)' : 'none'
                                                         }}
                                                     />
-                                                    <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">
+                                                    {hoveredSegment && (
+                                                        <div
+                                                            className="absolute inset-0 rounded-full pointer-events-none"
+                                                            style={{
+                                                                background: hoveredSegment === 'helpful'
+                                                                    ? `conic-gradient(rgba(34,197,94,0.28) 0% ${helpfulPercent}%, transparent ${helpfulPercent}% 100%)`
+                                                                    : `conic-gradient(transparent 0% ${helpfulPercent}%, rgba(239,68,68,0.28) ${helpfulPercent}% 100%)`,
+                                                                mask: 'radial-gradient(circle at 50% 50%, transparent 50%, black 51%)',
+                                                                WebkitMask: 'radial-gradient(circle at 50% 50%, transparent 50%, black 51%)',
+                                                                boxShadow: hoveredSegment === 'helpful'
+                                                                    ? '0 0 0 2px rgba(34,197,94,0.12) inset'
+                                                                    : '0 0 0 2px rgba(239,68,68,0.12) inset'
+                                                            }}
+                                                        />
+                                                    )}
+                                                    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 32 32" aria-hidden="true">
+                                                        {helpfulPercent > 0 && (
+                                                            <path
+                                                                d={getDonutSectorPath(0, helpfulAngle)}
+                                                                fill="transparent"
+                                                                stroke="transparent"
+                                                                pointerEvents="all"
+                                                                onMouseEnter={() => setHoveredSegment('helpful')}
+                                                                onMouseLeave={() => setHoveredSegment(null)}
+                                                                onClick={handleOpenHelpfulModal}
+                                                                style={{ cursor: 'pointer' }}
+                                                            />
+                                                        )}
+                                                        {helpfulPercent < 100 && (
+                                                            <path
+                                                                d={getDonutSectorPath(helpfulAngle, 360)}
+                                                                fill="transparent"
+                                                                stroke="transparent"
+                                                                pointerEvents="all"
+                                                                onMouseEnter={() => setHoveredSegment('notRelevant')}
+                                                                onMouseLeave={() => setHoveredSegment(null)}
+                                                                onClick={handleOpenNotRelevantModal}
+                                                                style={{ cursor: 'pointer' }}
+                                                            />
+                                                        )}
+                                                    </svg>
+                                                    <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700 pointer-events-none">
                                                         {filteredRatings.length} total
                                                     </div>
                                                 </div>
                                                 {/* Legend */}
                                                 <div className="flex-1 space-y-1 px-6">
-                                                    <div className="flex items-center gap-2 text-[10px]">
+                                                    <button
+                                                        type="button"
+                                                        className={`flex items-center gap-2 text-[10px] w-full rounded-lg px-2 py-2 transition ${hoveredSegment === 'helpful' ? 'bg-slate-200' : 'hover:bg-slate-100'}`}
+                                                        onMouseEnter={() => setHoveredSegment('helpful')}
+                                                        onMouseLeave={() => setHoveredSegment(null)}
+                                                        onClick={handleOpenHelpfulModal}
+                                                        aria-label="Show helpful materials"
+                                                    >
                                                         <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e' }}></span>
-                                                        <span className="flex-1">Helpful</span>
+                                                        <span className="flex-1 text-left">Helpful</span>
                                                         <span className="font-semibold text-gray-700">{helpfulCount} ({helpfulPercent.toFixed(1)}%)</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 text-[10px]">
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={`flex items-center gap-2 text-[10px] w-full rounded-lg px-2 py-2 transition ${hoveredSegment === 'notRelevant' ? 'bg-slate-200' : 'hover:bg-slate-100'}`}
+                                                        onMouseEnter={() => setHoveredSegment('notRelevant')}
+                                                        onMouseLeave={() => setHoveredSegment(null)}
+                                                        onClick={handleOpenNotRelevantModal}
+                                                        aria-label="Show not relevant materials"
+                                                    >
                                                         <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ef4444' }}></span>
-                                                        <span className="flex-1">Not relevant</span>
+                                                        <span className="flex-1 text-left">Not relevant</span>
                                                         <span className="font-semibold text-gray-700">{notRelevantCount} {(100 - helpfulPercent).toFixed(1)}%</span>
-                                                    </div>
+                                                    </button>
                                                 </div>
                                             </div>
                                         ) : (
@@ -5604,14 +6386,15 @@ const AdminDashboard = () => {
                                                                     }
 
                                                                     return (
-                                                                        <div key={`hover-${i}`} className="flex-1 relative group cursor-default h-full flex justify-center hover:z-50">
+                                                                        <div key={`hover-${i}`} className="flex-1 relative group cursor-pointer h-full flex justify-center hover:z-50">
                                                                             {/* Ghost hover highlight */}
                                                                             <div className="absolute inset-y-0 w-[80%] max-w-[32px] z-0 bg-blue-500/0 group-hover:bg-blue-500/10 transition-colors rounded-sm"></div>
 
                                                                             {/* Dot and tooltip anchor */}
                                                                             <div
-                                                                                className="absolute z-20 flex justify-center items-center"
+                                                                                className="absolute z-20 flex justify-center items-center cursor-pointer"
                                                                                 style={{ top: `${p.y}%`, transform: 'translateY(-50%)' }}
+                                                                                onClick={() => handleOpenTrendDetailModal(p)}
                                                                             >
                                                                                 <div className={`w-2.5 h-2.5 bg-white border-[2px] border-blue-600 rounded-full transition-transform group-hover:scale-[1.4] shadow-sm ${p.avgScore === 0 ? 'opacity-30 group-hover:opacity-100' : 'opacity-100'}`} />
 
@@ -6052,6 +6835,760 @@ const AdminDashboard = () => {
                                 <div className="flex flex-col items-center justify-center py-12">
                                     <BookOpen size={48} className="text-gray-300 mb-3" />
                                     <p className="text-gray-500 font-semibold">No dormant materials found</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Helpful Materials Modal */}
+            {showHelpfulModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <ThumbsUp size={24} className="text-green-200" />
+                                    Helpful Materials
+                                </h2>
+                                <p className="text-blue-100 text-sm mt-1">
+                                    {helpfulRatings.length} helpful vote{helpfulRatings.length !== 1 ? 's' : ''} in the selected period
+                                </p>
+                            </div>
+                            <button
+                                title="Close helpful materials modal"
+                                onClick={() => setShowHelpfulModal(false)}
+                                className="bg-[#1E74BC] hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {helpfulMaterialsByTitle.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Material / Thesis</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Helpful Votes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {helpfulMaterialsByTitle.map((item, index) => (
+                                                <tr key={index} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-700 max-w-xs break-words">{item.title}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{item.count}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <ThumbsUp size={48} className="text-gray-300 mb-3" />
+                                    <p className="text-gray-500 font-semibold">No helpful materials found</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Not Relevant Materials Modal */}
+            {showNotRelevantModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <ThumbsDown size={24} className="text-red-200" />
+                                    Not Relevant Materials
+                                </h2>
+                                <p className="text-blue-100 text-sm mt-1">
+                                    {notRelevantRatings.length} not relevant vote{notRelevantRatings.length !== 1 ? 's' : ''} in the selected period
+                                </p>
+                            </div>
+                            <button
+                                title="Close not relevant materials modal"
+                                onClick={() => setShowNotRelevantModal(false)}
+                                className="bg-[#1E74BC] hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {notRelevantMaterialsByTitle.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Material / Thesis</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Not Relevant Votes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {notRelevantMaterialsByTitle.map((item, index) => (
+                                                <tr key={index} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-700 max-w-xs break-words">{item.title}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{item.count}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <ThumbsDown size={48} className="text-gray-300 mb-3" />
+                                    <p className="text-gray-500 font-semibold">No not relevant materials found</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Rating Trend Detail Modal */}
+            {showRatingTrendDetailModal && selectedTrendBucket && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <TrendingUp size={24} className="text-blue-200" />
+                                    {selectedTrendBucket.tooltipRange} — Rating Detail
+                                </h2>
+                                <p className="text-blue-100 text-sm mt-1">
+                                    {selectedTrendBucket.count > 0 ? ((selectedTrendBucket.helpful / selectedTrendBucket.count) * 100).toFixed(1) : 0}% helpful vote rate — {selectedTrendBucket.helpful} of {selectedTrendBucket.count} votes
+                                </p>
+                            </div>
+                            <button
+                                title="Close rating detail modal"
+                                onClick={handleCloseTrendDetailModal}
+                                className="bg-[#1E74BC] hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {getTrendBucketVotes(selectedTrendBucket).length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Date</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Material / Thesis</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Vote</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Comment</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {getTrendBucketVotes(selectedTrendBucket).map((vote, index) => (
+                                                <tr key={index} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-600">{formatVoteDate(vote.created_at)}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-700 max-w-xs break-words">{getVoteSourceName(vote)}</td>
+                                                    <td className="px-4 py-3 text-sm font-semibold">
+                                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${vote.relevant === true ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                            {getVoteTypeLabel(vote)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-gray-700 max-w-xs break-words">{getVoteComment(vote)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <MessageSquare size={48} className="text-gray-300 mb-3" />
+                                    <p className="text-gray-500 font-semibold">No votes recorded for this period</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Relevance Score Details Modal */}
+            {showRelevanceScoreModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <Star size={24} className="text-yellow-200" />
+                                    Relevance Score Details
+                                </h2>
+                                <p className="text-blue-100 text-sm mt-1">
+                                    {getRelevanceScore()}% helpful vote rate — {helpfulCount} of {totalVotes} votes
+                                </p>
+                            </div>
+                            <button
+                                title="Close relevance score details modal"
+                                onClick={() => setShowRelevanceScoreModal(false)}
+                                className="bg-[#1E74BC] hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {relevanceDetails.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Material / Thesis</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Helpful</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Not Relevant</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Total Votes</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Relevance %</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {relevanceDetails.map((item, index) => (
+                                                <tr key={`${item.title}-${index}`} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-700 max-w-xs break-words">{item.title}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{item.helpful}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{item.notRelevant}</td>
+                                                    <td className="px-4 py-3 text-sm text-right text-gray-700">{item.total}</td>
+                                                    <td className="px-4 py-3 text-sm text-right text-gray-700">{item.relevanceRounded}%</td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        {item.needsReview ? (
+                                                            <span className="inline-block bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">
+                                                                Needs Review
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                                                Good
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <Star size={48} className="text-gray-300 mb-3" />
+                                    <p className="text-gray-500 font-semibold">No materials with votes found</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Top Rated Materials Modal */}
+            {showTopRatedModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <ThumbsUp size={24} className="text-blue-200" />
+                                    Top Rated Materials
+                                </h2>
+                                <p className="text-blue-100 text-sm mt-1">
+                                    Ranked by helpful votes — full list
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleTopRatedExportCSV}
+                                    className="bg-white text-[#1E74BC] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-blue-50 transition-colors flex items-center gap-2"
+                                >
+                                    <Download size={16} />
+                                    CSV
+                                </button>
+                                <button
+                                    onClick={handleTopRatedExportPDF}
+                                    className="bg-white text-[#1E74BC] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-blue-50 transition-colors flex items-center gap-2"
+                                >
+                                    <Download size={16} />
+                                    PDF
+                                </button>
+                                <button
+                                    title="Close top rated materials modal"
+                                    onClick={() => setShowTopRatedModal(false)}
+                                    className="bg-[#1E74BC] hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors ml-2"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {topRatedMaterials.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Rank</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Material / Thesis</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Helpful Votes</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Not Relevant Votes</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Relevance %</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {topRatedMaterials.map((item, index) => (
+                                                <tr key={`${item.title}-${index}`} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">{index + 1}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-700 break-words">{item.title}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{item.helpful}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{item.notRelevant}</td>
+                                                    <td className="px-4 py-3 text-sm text-right text-gray-700">{item.relevanceRounded}%</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <ThumbsUp size={48} className="text-gray-300 mb-3" />
+                                    <p className="text-gray-500 font-semibold">No materials with votes found</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Topic Materials Modal */}
+            {showTopicMaterialsModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <BookOpen size={22} className="text-blue-200" />
+                                    {selectedTopicName}
+                                </h2>
+                                <p className="text-blue-100 text-sm mt-1">
+                                    {selectedTopicViewCount} views across theses tagged with this subject
+                                </p>
+                            </div>
+                            <button
+                                title="Close topic materials modal"
+                                onClick={handleCloseTopicMaterialsModal}
+                                className="bg-[#1E74BC] hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {topicMaterials && topicMaterials.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Title</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Author</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">View Count</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {topicMaterials.map((item, index) => (
+                                                <tr key={`${item.title}-${index}`} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-700 break-words">{item.title || 'Untitled'}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-700">{item.author || '—'}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{item.view_count || 0}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <BookOpen size={48} className="text-gray-300 mb-3" />
+                                    <p className="text-gray-500 font-semibold">No materials found for this topic</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* NOTE: query-level search linkage for topics not available without backend changes — deferred, see backlog. */}
+
+            {/* All Theses (Most Viewed) Modal */}
+            {showAllThesesModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <BookOpen size={22} className="text-blue-200" />
+                                    Most Viewed Theses
+                                </h2>
+                                <p className="text-blue-100 text-sm mt-1">
+                                    {allTheses.length} theses with recorded views in the selected period
+                                </p>
+                            </div>
+                            <button
+                                title="Close most viewed theses modal"
+                                onClick={handleCloseAllThesesModal}
+                                className="bg-[#1E74BC] hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {allThesesLoading ? (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <p className="text-gray-500 text-sm">Loading...</p>
+                                </div>
+                            ) : allTheses.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Rank</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Title</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Author</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Views</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {allTheses.map((item, index) => (
+                                                <tr key={`${item.title}-${index}`} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">{index + 1}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-700 break-words">{item.title || 'Untitled'}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-700">{item.author || 'Unknown Author'}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{formatNumber(item.view_count)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <BookOpen size={48} className="text-gray-300 mb-3" />
+                                    <p className="text-gray-500 font-semibold">No viewed theses found</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Gender Detail Modal */}
+            {showGenderDetailModal && selectedGenderItem && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-md w-full overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <Users size={22} className="text-blue-200" />
+                                    {selectedGenderItem.gender} Respondents
+                                </h2>
+                                <p className="text-blue-100 text-sm mt-1">
+                                    {selectedGenderItem.count} of {dashboardData.genderDistribution.reduce((sum, g) => sum + g.count, 0)} total respondents ({selectedGenderItem.percentage}%)
+                                </p>
+                            </div>
+                            <button
+                                title="Close gender detail modal"
+                                onClick={handleCloseGenderDetailModal}
+                                className="bg-[#1E74BC] hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                This reflects self-reported gender from feedback submissions and user account registrations in the selected period. With a small total sample size, percentages can shift significantly with just a few new respondents — consider this alongside <span className="font-semibold">Users by Category</span> for fuller context.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* All Failed Queries Modal */}
+            {showAllFailedQueriesModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <AlertCircle size={22} className="text-blue-200" />
+                                    Top Failed Queries
+                                </h2>
+                                <p className="text-blue-100 text-sm mt-1">
+                                    {allFailedQueries.length} unique queries with zero results in the selected period
+                                </p>
+                            </div>
+                            <button
+                                title="Close failed queries modal"
+                                onClick={handleCloseAllFailedQueriesModal}
+                                className="bg-[#1E74BC] hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {allFailedQueriesLoading ? (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <p className="text-gray-500 text-sm">Loading...</p>
+                                </div>
+                            ) : allFailedQueries.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Query</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Count</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {allFailedQueries.map((item, index) => (
+                                                <tr key={`${item.query}-${index}`} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-700 break-words">{item.query}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-red-600">{item.count}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <AlertCircle size={48} className="text-gray-300 mb-3" />
+                                    <p className="text-gray-500 font-semibold">No failed queries found</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Activity Trend Detail Modal */}
+            {showActivityTrendDetailModal && selectedActivityBucket && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <Calendar size={22} className="text-blue-200" />
+                                    {selectedActivityBucket.tooltipRange || `${selectedActivityBucket.month} ${selectedActivityBucket.year}` || selectedActivityBucket.fullDate}
+                                </h2>
+                                <p className="text-blue-100 text-sm mt-1">
+                                    {selectedActivityBucket.views} total view{selectedActivityBucket.views !== 1 ? 's' : ''} in this period
+                                </p>
+                            </div>
+                            <button
+                                title="Close activity trend detail modal"
+                                onClick={handleCloseActivityTrendDetailModal}
+                                className="bg-[#1E74BC] hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {activityBucketLoading ? (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <p className="text-gray-500 text-sm">Loading...</p>
+                                </div>
+                            ) : activityBucketMaterials.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Title</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Author</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Views</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {activityBucketMaterials.map((item, index) => (
+                                                <tr key={`${item.title}-${index}`} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-700 break-words">{item.title || 'Untitled'}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-700">{item.author || 'Unknown Author'}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{formatNumber(item.view_count)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <Calendar size={48} className="text-gray-300 mb-3" />
+                                    <p className="text-gray-500 font-semibold">No materials viewed in this period</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Citation Detail Modal */}
+            {showCitationDetailModal && selectedCitationBucket && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <Copy size={22} className="text-blue-200" />
+                                    {selectedCitationBucket.tooltipRange || `${selectedCitationBucket.month} ${selectedCitationBucket.year}`}
+                                </h2>
+                                <p className="text-blue-100 text-sm mt-1">
+                                    {selectedCitationBucket.copies} total citation cop{selectedCitationBucket.copies !== 1 ? 'ies' : 'y'} in this period
+                                </p>
+                            </div>
+                            <button
+                                title="Close citation detail modal"
+                                onClick={handleCloseCitationDetailModal}
+                                className="bg-[#1E74BC] hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {citationBucketLoading ? (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <p className="text-gray-500 text-sm">Loading...</p>
+                                </div>
+                            ) : citationBucketMaterials.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Title</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Author</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Citations</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {citationBucketMaterials.map((item, index) => (
+                                                <tr key={`${item.document__title}-${index}`} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-700 break-words">{item.document__title || item.document__file || 'Untitled'}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-700">{item.document__author || 'Unknown Author'}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{item.copies}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <Copy size={48} className="text-gray-300 mb-3" />
+                                    <p className="text-gray-500 font-semibold">No citations recorded in this period</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Archive Confirmation Modal (UI-only placeholder) */}
+            {showArchiveConfirmModal && archiveTargetMaterial && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Archive material?</h2>
+                                <p className="text-blue-100 text-sm mt-1">Archive this material? It will be removed from active search results.</p>
+                            </div>
+                            <button
+                                title="Close"
+                                onClick={handleCancelArchive}
+                                className="bg-[#1E74BC] hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <p className="text-gray-700">{archiveTargetMaterial.title}</p>
+                        </div>
+
+                        <div className="px-6 py-4 flex items-center justify-end gap-2">
+                            <button
+                                onClick={handleCancelArchive}
+                                className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmArchivePlaceholder}
+                                className="bg-[#1E74BC] text-white px-4 py-2 rounded-lg"
+                            >
+                                Confirm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Total Votes Details Modal */}
+            {showVotesModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <MessageSquare size={24} className="text-blue-200" />
+                                    Total Votes Details
+                                </h2>
+                                <p className="text-blue-100 text-sm mt-1">
+                                    {filteredRatings.length} vote{filteredRatings.length !== 1 ? 's' : ''} in the selected period
+                                </p>
+                            </div>
+                            <button
+                                title="Close vote details modal"
+                                onClick={() => setShowVotesModal(false)}
+                                className="bg-[#1E74BC] hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {filteredRatings.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Date</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Material / Thesis</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Vote</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Voter</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Comment</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {filteredRatings.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map((vote, index) => (
+                                                <tr key={index} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-600">{formatVoteDate(vote.created_at)}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-700 max-w-xs break-words">{getVoteSourceName(vote)}</td>
+                                                    <td className="px-4 py-3 text-sm font-semibold">
+                                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${vote.relevant === true ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                            {getVoteTypeLabel(vote)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-gray-600">
+                                                        {vote.user?.username || vote.username || vote.user?.full_name || '—'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-gray-700 max-w-xs break-words">
+                                                        {getVoteComment(vote)}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <MessageSquare size={48} className="text-gray-300 mb-3" />
+                                    <p className="text-gray-500 font-semibold">No votes available for the selected filter</p>
                                 </div>
                             )}
                         </div>
