@@ -5834,7 +5834,8 @@ const AdminDashboard = () => {
                                             handleOpenVotesModal();
                                         }
                                     }}
-                                    className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group"
+                                    title="Open total votes KPI details"
+                                    className="group relative flex flex-col h-full bg-white p-4 rounded-lg shadow-sm border border-blue-100 cursor-pointer hover:shadow-md hover:border-[#1E74BC] hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-[#1E74BC] focus:ring-offset-2 transition-all"
                                 >
                                     <div className="flex items-center gap-1">
                                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
@@ -5860,9 +5861,10 @@ const AdminDashboard = () => {
                                             from {trendLabel}
                                         </div>
                                     )}
-                                    <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-blue-600">
-                                        Click to view
-                                    </div>
+                                    <span className="mt-auto pt-1 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#1E74BC] border border-blue-100 group-hover:bg-white w-fit leading-none">
+                                        View KPI
+                                        <ChevronRight size={12} />
+                                    </span>
                                 </div>
 
                                 {/* Relevance Score */}
@@ -5876,7 +5878,8 @@ const AdminDashboard = () => {
                                             handleOpenRelevanceScoreModal();
                                         }
                                     }}
-                                    className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group"
+                                    title="Open relevance score KPI details"
+                                    className="group relative flex flex-col h-full bg-white p-4 rounded-lg shadow-sm border border-blue-100 cursor-pointer hover:shadow-md hover:border-[#1E74BC] hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-[#1E74BC] focus:ring-offset-2 transition-all"
                                 >
                                     <div className="flex items-center gap-1">
                                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
@@ -5899,12 +5902,13 @@ const AdminDashboard = () => {
                                     <p className="text-xs text-gray-500 mt-1">
                                         {helpfulCount} relevant material vote{helpfulCount !== 1 ? 's' : ''}
                                     </p>
-                                    <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
+                                    <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2 mb-3.5">
                                         <div className="bg-gradient-to-r from-yellow-400 to-orange-500 h-1.5 rounded-full" style={{ width: `${getRelevanceScore()}%` }}></div>
                                     </div>
-                                    <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-blue-600">
-                                        Click to view
-                                    </div>
+                                    <span className="mt-auto pt-1 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#1E74BC] border border-blue-100 group-hover:bg-white w-fit leading-none">
+                                        View KPI
+                                        <ChevronRight size={12} />
+                                    </span>
                                 </div>
 
                                 {/* Helpful */}
@@ -5918,7 +5922,8 @@ const AdminDashboard = () => {
                                             handleOpenHelpfulModal();
                                         }
                                     }}
-                                    className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group relative"
+                                    title="Open helpful votes KPI details"
+                                    className="group relative flex flex-col h-full bg-white p-4 rounded-lg shadow-sm border border-blue-100 cursor-pointer hover:shadow-md hover:border-[#1E74BC] hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-[#1E74BC] focus:ring-offset-2 transition-all"
                                 >
                                     <div className="flex items-center gap-1">
                                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
@@ -5938,9 +5943,10 @@ const AdminDashboard = () => {
                                         {helpfulCount}
                                     </p>
                                     <p className="text-xs text-gray-400 mt-1">Same material voted as relevant</p>
-                                    <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-blue-600">
-                                        Click to view
-                                    </div>
+                                    <span className="mt-auto pt-1 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#1E74BC] border border-blue-100 group-hover:bg-white w-fit leading-none">
+                                        View KPI
+                                        <ChevronRight size={12} />
+                                    </span>
                                 </div>
 
                                 {/* Dormant Materials */}
@@ -5956,39 +5962,29 @@ const AdminDashboard = () => {
                                             handleOpenDormantMaterialsModal();
                                         }
                                     }}
-
                                     title="Open dormant materials KPI details"
-                                    className="group relative bg-white p-4 rounded-lg shadow-sm border border-blue-100 cursor-pointer hover:shadow-md hover:border-[#1E74BC] hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-[#1E74BC] focus:ring-offset-2 transition-all"
+                                    className="group relative flex flex-col h-full bg-white p-4 rounded-lg shadow-sm border border-blue-100 cursor-pointer hover:shadow-md hover:border-[#1E74BC] hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-[#1E74BC] focus:ring-offset-2 transition-all"
                                 >
-                                    <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1">
                                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
                                             <LogOut size={18} className="text-blue-600" /> Dormant Materials
                                         </p>
-                                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-[#1E74BC] border border-blue-100 group-hover:bg-white">
-                                            View KPI
-                                            <ChevronRight size={12} />
-                                        </span>
-                                    </div>
-                                    <div className="flex items-start justify-between gap-3 mt-2">
-                                        <div>
-                                            <p className="text-2xl font-bold text-gray-900">{formatNumber(dormantCount)}</p>
-                                            <p className="text-xs text-gray-400 mt-1">Dormant (30+ days)</p>
-                                        </div>
-                                        <div className="relative group pointer-events-none">
+                                        <div className="relative group">
                                             <Info size={14} className="text-gray-400 cursor-help hover:text-gray-600" />
-                                            <div className="absolute bottom-full right-0 mb-2 hidden group-hover:flex flex-col items-end z-50 pointer-events-none w-72 max-w-[min(18rem,calc(100vw-2rem))]">
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none w-72 max-w-[min(18rem,calc(100vw-2rem))]">
                                                 <div className="bg-gray-800 text-white text-[10px] px-3 py-2 rounded shadow-lg text-center leading-snug whitespace-normal">
                                                     Materials not accessed for 30+ days or never accessed (and uploaded 30+ days ago). Click to see details.
                                                 </div>
-                                                <div className="mr-2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-gray-800"></div>
+                                                <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-gray-800"></div>
                                             </div>
                                         </div>
                                     </div>
                                     <p className="text-2xl font-bold text-gray-900 mt-2">{formatNumber(dormantCount)}</p>
                                     <p className="text-xs text-gray-400 mt-1">Dormant (30+ days)</p>
-                                    <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-blue-600">
-                                        Click to view
-                                    </div>
+                                    <span className="mt-auto pt-1 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#1E74BC] border border-blue-100 group-hover:bg-white w-fit leading-none">
+                                        View KPI
+                                        <ChevronRight size={12} />
+                                    </span>
                                 </div>
                             </div>
 
