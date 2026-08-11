@@ -1,10 +1,9 @@
-# LitPath AI - Intelligent Thesis Search System
+# LitPath AI - Smart Pathfinder for Theses and Dissertations
 
 **PBL Team:**
 - **Project Lead:** Jenine Elaine Dulay
 - **QA Tester:** Tracie Tomon
-- **Developer:** Charijoy Cempron
-- **Developer:** Marielle Kloie Concepcion
+- **Developer:** Charijoy Cempron, Joshua Sta Ana
 
 ---
 
@@ -156,13 +155,32 @@ Notes:
 
 ## 🗂️ Database Schema
 
-See your ERD implementation in `backend/rag_api/models.py` (ready to add):
-- `DocumentCache` - Cached thesis metadata
-- `SearchHistory` - User search tracking
-- `Bookmark` - Saved documents
-- `UsageStatistics` - Action tracking
-- `FeedbackLog` - User feedback
-- `StaffAccount` - Admin users
+Models are defined in `backend/rag_api/models.py`:
+
+**Authentication & Access**
+- `UserAccount` — unified account table for guests, users, staff, and admins (role-based)
+- `Session` — one active session per authenticated user, plus anonymous guest sessions
+- `AdminUser` — legacy admin table, kept for backward compatibility (deprecated in favor of `UserAccount`)
+
+**Research & Content**
+- `Material` — thesis/dissertation metadata (title, author, year, subjects, etc.)
+- `MaterialView` — tracks each time a material is viewed
+- `MaterialRating` — 1–5 star ratings per user per material
+- `Bookmark` — saved materials per user, auto-expiring after 30 days
+- `ResearchHistory` — logged search sessions and queries
+- `CitationCopy` — logs citation-style copy events per material
+
+**Feedback**
+- `Feedback` — general user feedback with admin triage (status, validity, feasibility)
+- `CSMFeedback` — full Client Satisfaction Measurement survey (DOST-STII compliance form), with admin triage and edit audit trail
+
+**Admin & System Configuration**
+- `SystemSettings` — singleton config for AI model, search, and environment settings
+- `DatabaseStructureRecord` — schema/migration change history tracking
+- `DatabaseBackupRecord` — backup plans and history
+- `SecurityAuthenticationPolicy` — password/MFA/session policy rules
+- `SecurityAccessControlRule` — role/user/group permission rules
+- `SecurityAuditLogEntry` — security event audit log
 
 ---
 
