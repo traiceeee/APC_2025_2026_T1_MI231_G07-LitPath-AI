@@ -26,6 +26,7 @@ interface RegisterPayload {
     school_level: string;
     school_name: string;
     client_type: string;
+    client_type_other?: string;
     sex: string;
     age: string;
     region: string;

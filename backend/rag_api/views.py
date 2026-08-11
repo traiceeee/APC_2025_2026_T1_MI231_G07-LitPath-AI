@@ -86,6 +86,8 @@ def insert_to_supabase_general_feedback(data):
     Returns True on success, False on failure.
     """
     try:
+        resolved_client_type = data.get('client_type_other') if (data.get('client_type') == 'Others' and data.get('client_type_other')) else data.get('client_type')
+
         # Get Supabase connection settings from Django settings
         # Check if SUPABASE_URL env var is set for external Supabase
         import os
@@ -136,7 +138,7 @@ def insert_to_supabase_general_feedback(data):
             data.get('user_id'),
             data.get('session_id'),
             data.get('consent_given'),
-            data.get('client_type'),
+            resolved_client_type,
             data.get('date'),
             data.get('sex'),
             data.get('age'),

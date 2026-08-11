@@ -88,9 +88,9 @@ def auth_update_profile_view(request):
     if 'school_name' in data:
         user.school_name = (data.get('school_name') or '').strip() or None
     if 'client_type' in data:
-        client_type = (data.get('client_type') or '').strip()
-        if client_type and not _is_valid_choice(client_type, ALLOWED_CLIENT_TYPES):
-            return Response({'success': False, 'message': 'Invalid client type selected'}, status=status.HTTP_400_BAD_REQUEST)
+        client_type = _normalize_client_type(data.get('client_type'), data.get('client_type_other'))
+        if (data.get('client_type') or '').strip() == 'Others' and not client_type:
+            return Response({'success': False, 'message': 'Client type details are required when Others is selected'}, status=status.HTTP_400_BAD_REQUEST)
         user.client_type = client_type or None
     if 'sex' in data:
         sex = (data.get('sex') or '').strip()
@@ -143,6 +143,7 @@ ALLOWED_SCHOOL_LEVELS = {
     'Postgraduate'
 }
 ALLOWED_CLIENT_TYPES = {choice[0] for choice in CSMFeedback.CLIENT_TYPE_CHOICES}
+ALLOWED_CLIENT_TYPE_BASE = {choice[0] for choice in CSMFeedback.CLIENT_TYPE_CHOICES if choice[0] != 'Others'}
 ALLOWED_SEX = {choice[0] for choice in CSMFeedback.SEX_CHOICES}
 ALLOWED_AGE = {choice[0] for choice in CSMFeedback.AGE_CHOICES}
 ALLOWED_REGION = {choice[0] for choice in CSMFeedback.REGION_CHOICES}
@@ -151,6 +152,19 @@ ALLOWED_CATEGORY = {choice[0] for choice in CSMFeedback.CATEGORY_CHOICES}
 
 def _is_valid_choice(value, allowed_values):
     return value in allowed_values
+
+
+def _normalize_client_type(client_type, client_type_other=''):
+    selected_client_type = (client_type or '').strip()
+    custom_client_type = (client_type_other or '').strip()
+
+    if selected_client_type == 'Others':
+        return custom_client_type or None
+
+    if selected_client_type in ALLOWED_CLIENT_TYPE_BASE:
+        return selected_client_type
+
+    return selected_client_type or None
 
 
 def _client_ip(request_obj):
@@ -316,6 +330,7 @@ def auth_register_view(request):
     school_level = request.data.get('school_level', '').strip()
     school_name = request.data.get('school_name', '').strip()
     client_type = request.data.get('client_type', '').strip()
+    client_type_other = request.data.get('client_type_other', '').strip()
     sex = request.data.get('sex', '').strip()
     age = request.data.get('age', '').strip()
     region = request.data.get('region', '').strip()
@@ -356,8 +371,9 @@ def auth_register_view(request):
             'message': password_error
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    if not _is_valid_choice(client_type, ALLOWED_CLIENT_TYPES):
-        return Response({'success': False, 'message': 'Invalid client type selected'}, status=status.HTTP_400_BAD_REQUEST)
+    normalized_client_type = _normalize_client_type(client_type, client_type_other)
+    if client_type == 'Others' and not normalized_client_type:
+        return Response({'success': False, 'message': 'Client type details are required when Others is selected'}, status=status.HTTP_400_BAD_REQUEST)
     if client_type == 'Student':
         if not school_level or not school_name:
             return Response({'success': False, 'message': 'School level and school name are required for students'}, status=status.HTTP_400_BAD_REQUEST)
@@ -397,7 +413,7 @@ def auth_register_view(request):
             full_name=full_name or username,
             school_level=school_level,
             school_name=school_name,
-            client_type=client_type,
+            client_type=normalized_client_type,
             sex=sex,
             age=age,
             region=region,

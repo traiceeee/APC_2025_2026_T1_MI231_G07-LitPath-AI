@@ -62,17 +62,6 @@ const AuthPage = () => {
         { value: 'Postgraduate', label: 'Postgraduate' }
     ];
 
-    const clientTypeChoices = [
-        { value: 'Citizen', label: 'Citizen' },
-        { value: 'Student', label: 'Student' },
-        { value: 'DOST Employee', label: 'DOST Employee' },
-        { value: 'Other Government Employee', label: 'Other Government Employee' },
-        { value: 'Librarian/Library Staff', label: 'Librarian/Library Staff' },
-        { value: 'Teaching Personnel', label: 'Teaching Personnel' },
-        { value: 'Administrative Personnel', label: 'Administrative Personnel' },
-        { value: 'Researcher', label: 'Researcher' }
-    ];
-
     const sexChoices = [
         { value: 'Female', label: 'Female' },
         { value: 'Male', label: 'Male' },
@@ -116,6 +105,17 @@ const AuthPage = () => {
         { value: 'N/A', label: '[N/A] Not Applicable (Overseas)' }
     ];
 
+    const clientTypeChoices = [
+        { value: 'Student', label: 'Student' },
+        { value: 'DOST Employee', label: 'DOST Employee' },
+        { value: 'Other Government Employee', label: 'Other Government Employee' },
+        { value: 'Librarian/Library Staff', label: 'Librarian/Library Staff' },
+        { value: 'Teaching Personnel', label: 'Teaching Personnel' },
+        { value: 'Administrative Personnel', label: 'Administrative Personnel' },
+        { value: 'Researcher', label: 'Researcher' },
+        { value: 'Others', label: 'Others' }
+    ];
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -125,6 +125,7 @@ const AuthPage = () => {
     const [signupSchoolLevel, setSignupSchoolLevel] = useState('');
     const [signupSchoolName, setSignupSchoolName] = useState('');
     const [signupClientType, setSignupClientType] = useState('');
+    const [signupClientTypeOther, setSignupClientTypeOther] = useState('');
     const [signupSex, setSignupSex] = useState('');
     const [signupAge, setSignupAge] = useState('');
     const [signupRegion, setSignupRegion] = useState('');
@@ -137,6 +138,7 @@ const AuthPage = () => {
     const [successMessage, setSuccessMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const isStudentClient = signupClientType === 'Student';
+    const isOtherClient = signupClientType === 'Others';
     const signupPasswordChecks = getPasswordRequirementChecks(signupPassword);
 
     useEffect(() => {
@@ -145,6 +147,12 @@ const AuthPage = () => {
             setSignupSchoolName('');
         }
     }, [isStudentClient]);
+
+    useEffect(() => {
+        if (!isOtherClient) {
+            setSignupClientTypeOther('');
+        }
+    }, [isOtherClient]);
 
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -194,6 +202,11 @@ const AuthPage = () => {
             return;
         }
 
+        if (isOtherClient && !signupClientTypeOther.trim()) {
+            setError('Please specify your client type when Others is selected.');
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -205,6 +218,7 @@ const AuthPage = () => {
                 school_level: isStudentClient ? signupSchoolLevel : '',
                 school_name: isStudentClient ? signupSchoolName : '',
                 client_type: signupClientType,
+                client_type_other: isOtherClient ? signupClientTypeOther.trim() : '',
                 sex: signupSex,
                 age: signupAge,
                 region: signupRegion,
@@ -513,7 +527,13 @@ const AuthPage = () => {
                                     <select
                                         id="signupClientType"
                                         value={signupClientType}
-                                        onChange={(e) => setSignupClientType(e.target.value)}
+                                        onChange={(e) => {
+                                            const nextClientType = e.target.value;
+                                            setSignupClientType(nextClientType);
+                                            if (nextClientType !== 'Others') {
+                                                setSignupClientTypeOther('');
+                                            }
+                                        }}
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         required
                                         disabled={isLoading}
@@ -524,6 +544,24 @@ const AuthPage = () => {
                                         ))}
                                     </select>
                                 </div>
+
+                                {isOtherClient && (
+                                    <div>
+                                        <label htmlFor="signupClientTypeOther" className="block text-sm font-medium text-gray-700 mb-1">
+                                            Please specify <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="signupClientTypeOther"
+                                            value={signupClientTypeOther}
+                                            onChange={(e) => setSignupClientTypeOther(e.target.value)}
+                                            placeholder="Enter your client type"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            required
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                )}
 
                                 {isStudentClient && (
                                     <>

@@ -1,4 +1,4 @@
-from django.db import models
+﻿from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 import uuid
@@ -636,7 +636,6 @@ class CSMFeedback(models.Model):
 
     # Client Type choices (unified with Category)
     CLIENT_TYPE_CHOICES = [
-        ('Citizen', 'Citizen'),
         ('Student', 'Student'),
         ('DOST Employee', 'DOST Employee'),
         ('Other Government Employee', 'Other Government Employee'),
@@ -644,6 +643,7 @@ class CSMFeedback(models.Model):
         ('Teaching Personnel', 'Teaching Personnel'),
         ('Administrative Personnel', 'Administrative Personnel'),
         ('Researcher', 'Researcher'),
+        ('Others', 'Others'),
     ]
     
     # Sex choices
@@ -732,8 +732,10 @@ class CSMFeedback(models.Model):
         help_text="For Student client type")
     school_name = models.CharField(max_length=255, blank=True, null=True,
         help_text="For Student client type")
+    client_type_other = models.CharField(max_length=255, blank=True, null=True,
+        help_text="Required when client type is Others")
     company = models.CharField(max_length=255, blank=True, null=True,
-        help_text="For Citizen client type")
+        help_text="Optional organization or affiliation")
     
     # III. Feedback & Evaluation
     litpath_rating = models.IntegerField(choices=RATING_CHOICES, blank=True, null=True)

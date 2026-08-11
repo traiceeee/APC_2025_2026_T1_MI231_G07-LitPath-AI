@@ -90,6 +90,8 @@ const AdminDashboard = () => {
     const [showFeedbackDateDropdown, setShowFeedbackDateDropdown] = useState(false);
     const feedbackDateDropdownRef = useRef(null);
 
+    const clientTypeFilterOptions = ['Student', 'DOST Employee', 'Other Government Employee', 'Librarian/Library Staff', 'Teaching Personnel', 'Administrative Personnel', 'Researcher', 'Others'];
+
     // ---------- Feedback Manager Client Type & Status Filters ----------
     const [showClientTypeDropdown, setShowClientTypeDropdown] = useState(false);
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -982,6 +984,13 @@ const AdminDashboard = () => {
             .filter(fb => isFeedbackInDateRange(fb.created_at));
     };
 
+    const getDisplayClientType = (feedback) => {
+        if (!feedback) return '—';
+        if (feedback.display_client_type) return feedback.display_client_type;
+        if (feedback.client_type === 'Others' && feedback.client_type_other) return feedback.client_type_other;
+        return feedback.client_type || '—';
+    };
+
     
     // ---------- Feedback Manager Export Data to CSV ----------
     const handleFeedbackExportCSV = () => {
@@ -1058,7 +1067,7 @@ const AdminDashboard = () => {
                 rows.push([
                     escape(new Date(fb.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })),
                     escape(ratingText),
-                    escape(fb.client_type || ''),
+                    escape(getDisplayClientType(fb)),
                     escape(fb.region || ''),
                     fb.admin_category && fb.admin_category.trim() !== '' ? escape(fb.admin_category) : 'N/A',
                     escape(comment),
@@ -1159,7 +1168,7 @@ const AdminDashboard = () => {
                 yPos += 5;
                 doc.text(`Rating: ${ratingText}`, 25, yPos);
                 yPos += 5;
-                doc.text(`Category: ${fb.client_type || 'N/A'}`, 25, yPos);
+                doc.text(`Category: ${getDisplayClientType(fb)}`, 25, yPos);
                 yPos += 5;
                 doc.text(`Region: ${fb.region || 'N/A'}`, 25, yPos);
                 yPos += 5;
@@ -2994,6 +3003,184 @@ const AdminDashboard = () => {
         setSelectedTrendBucket(null);
     };
 
+    const formatDormantDate = (value, options = { year: 'numeric', month: 'short', day: 'numeric' }) => {
+        if (!value) return 'Never';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return 'Never';
+        return date.toLocaleDateString('en-US', options);
+    };
+
+    const getDormantInactivityDays = (material) => {
+        const anchorDate = material.last_accessed || material.created_at;
+        if (!anchorDate) return 0;
+        const date = new Date(anchorDate);
+        if (Number.isNaN(date.getTime())) return 0;
+        return Math.max(0, Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24)));
+    };
+
+    const getDormantReason = (material) => {
+        if (!material.last_accessed) return 'Never accessed';
+        return 'Inactive for 30+ days';
+    };
+
+    const getDormantAction = (material) => {
+        if (!material.last_accessed) return 'Prioritize discovery campaign';
+        if ((material.view_count || 0) === 0) return 'Review metadata and promote';
+        return 'Refresh title visibility or recommendations';
+    };
+
+    const getLocalDateString = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const getDormantKpis = () => {
+        const total = dormantMaterialsList.length;
+        const neverAccessed = dormantMaterialsList.filter(material => !material.last_accessed).length;
+        const previouslyAccessed = total - neverAccessed;
+        const zeroViews = dormantMaterialsList.filter(material => (material.view_count || 0) === 0).length;
+        const totalViews = dormantMaterialsList.reduce((sum, material) => sum + (material.view_count || 0), 0);
+        const inactivityDays = dormantMaterialsList.map(getDormantInactivityDays);
+        const longestInactiveDays = inactivityDays.length ? Math.max(...inactivityDays) : 0;
+        const averageInactiveDays = inactivityDays.length
+            ? Math.round(inactivityDays.reduce((sum, days) => sum + days, 0) / inactivityDays.length)
+            : 0;
+
+        return {
+            total,
+            neverAccessed,
+            previouslyAccessed,
+            zeroViews,
+            totalViews,
+            averageViews: total ? (totalViews / total).toFixed(1) : '0.0',
+            averageInactiveDays,
+            longestInactiveDays,
+            neverAccessedPercent: total ? Math.round((neverAccessed / total) * 100) : 0,
+            zeroViewsPercent: total ? Math.round((zeroViews / total) * 100) : 0
+        };
+    };
+
+    const getDormantExportRows = () => dormantMaterialsList.map(material => ({
+        title: material.title || 'Untitled',
+        year: material.year || '-',
+        file: material.file || '-',
+        uploaded: material.created_at ? formatDormantDate(material.created_at) : '-',
+        lastAccessed: material.last_accessed ? formatDormantDate(material.last_accessed) : 'Never',
+        daysInactive: getDormantInactivityDays(material),
+        views: material.view_count || 0,
+        reason: getDormantReason(material),
+        action: getDormantAction(material)
+    }));
+
+    const handleDormantMaterialsExportExcel = () => {
+        try {
+            if (dormantMaterialsList.length === 0) {
+                showToast('No dormant materials to export', 'error');
+                return;
+            }
+
+            const escapeHtml = (value) => {
+                if (value === null || value === undefined) return '';
+                return String(value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            };
+
+            const exportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            const kpis = getDormantKpis();
+            const rows = getDormantExportRows();
+            const summaryRows = [
+                ['Total Dormant Materials', kpis.total],
+                ['Never Accessed', `${kpis.neverAccessed} (${kpis.neverAccessedPercent}%)`],
+                ['Previously Accessed', kpis.previouslyAccessed],
+                ['Zero View Materials', `${kpis.zeroViews} (${kpis.zeroViewsPercent}%)`],
+                ['Average Views', kpis.averageViews],
+                ['Average Inactive Days', kpis.averageInactiveDays],
+                ['Longest Inactive Days', kpis.longestInactiveDays]
+            ];
+
+            const workbookHtml = `
+                <html>
+                    <head>
+                        <meta charset="UTF-8" />
+                        <style>
+                            body { font-family: Arial, sans-serif; color: #111827; }
+                            h1 { color: #1E74BC; margin-bottom: 4px; }
+                            .meta { color: #4b5563; margin-bottom: 18px; }
+                            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+                            th { background: #1E74BC; color: #ffffff; font-weight: 700; }
+                            th, td { border: 1px solid #d1d5db; padding: 8px; vertical-align: top; }
+                            .summary th { background: #155a8f; }
+                            .risk { background: #fef2f2; color: #991b1b; font-weight: 700; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>LitPath AI - Dormant Materials KPI Report</h1>
+                        <div class="meta">Exported: ${escapeHtml(exportDate)} | Definition: materials never accessed or inactive for 30+ days after upload.</div>
+                        <table class="summary">
+                            <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                            <tbody>
+                                ${summaryRows.map(row => `<tr><td>${escapeHtml(row[0])}</td><td>${escapeHtml(row[1])}</td></tr>`).join('')}
+                            </tbody>
+                        </table>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Year</th>
+                                    <th>File</th>
+                                    <th>Uploaded</th>
+                                    <th>Last Accessed</th>
+                                    <th>Days Inactive</th>
+                                    <th>Views</th>
+                                    <th>Dormancy Reason</th>
+                                    <th>Recommended Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows.map(row => `
+                                    <tr>
+                                        <td>${escapeHtml(row.title)}</td>
+                                        <td>${escapeHtml(row.year)}</td>
+                                        <td>${escapeHtml(row.file)}</td>
+                                        <td>${escapeHtml(row.uploaded)}</td>
+                                        <td>${escapeHtml(row.lastAccessed)}</td>
+                                        <td class="${row.daysInactive >= 90 ? 'risk' : ''}">${escapeHtml(row.daysInactive)}</td>
+                                        <td>${escapeHtml(row.views)}</td>
+                                        <td>${escapeHtml(row.reason)}</td>
+                                        <td>${escapeHtml(row.action)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </body>
+                </html>
+            `;
+
+            const blob = new Blob(['\uFEFF' + workbookHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `LitPathAI_DormantMaterials_KPI_${getLocalDateString()}.xls`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            showToast('Dormant materials exported to Excel successfully!', 'success');
+        } catch (error) {
+            console.error("Dormant materials Excel export failed:", error);
+            showToast('Failed to export dormant materials. Please try again.', 'error');
+        }
+    };
+
+    // eslint-disable-next-line no-unused-vars
     const handleDormantMaterialsExportCSV = () => {
         try {
             if (dormantMaterialsList.length === 0) {
@@ -3134,13 +3321,15 @@ const AdminDashboard = () => {
             doc.text(sanitizeText(`Exported: ${exportDate} | Total: ${dormantMaterialsList.length}`), pageWidth / 2, 20, { align: 'center' });
 
             yPos = 32;
+            const kpis = getDormantKpis();
+            const exportRows = getDormantExportRows();
 
             // Summary
             doc.setTextColor(0, 0, 0);
             doc.setFontSize(14);
             doc.setFont('courier', 'bold');
             doc.setTextColor(30, 116, 188);
-            doc.text(sanitizeText('Summary'), 14, yPos);
+            doc.text(sanitizeText('KPI Summary'), 14, yPos);
             yPos += 5;
 
             doc.setFontSize(10);
@@ -3151,7 +3340,45 @@ const AdminDashboard = () => {
             doc.text(sanitizeText(`Definition: Materials not accessed for 30+ days or never accessed (uploaded 30+ days ago)`), 14, yPos);
             yPos += 8;
 
+            autoTable(doc, {
+                head: [['Metric', 'Value']],
+                body: [
+                    ['Never Accessed', `${kpis.neverAccessed} (${kpis.neverAccessedPercent}%)`],
+                    ['Previously Accessed', kpis.previouslyAccessed.toLocaleString()],
+                    ['Zero View Materials', `${kpis.zeroViews} (${kpis.zeroViewsPercent}%)`],
+                    ['Average Views', kpis.averageViews],
+                    ['Average Inactive Days', `${kpis.averageInactiveDays} days`],
+                    ['Longest Inactive Days', `${kpis.longestInactiveDays} days`]
+                ],
+                startY: yPos,
+                margin: 14,
+                theme: 'striped',
+                headStyles: { fillColor: [30, 116, 188], textColor: 255, fontStyle: 'bold' },
+                bodyStyles: { fontSize: 9, cellPadding: 3 },
+                columnStyles: {
+                    0: { cellWidth: 100, fontStyle: 'bold' },
+                    1: { cellWidth: 80, halign: 'right' }
+                }
+            });
+
+            yPos = doc.lastAutoTable.finalY + 10;
+            doc.setFontSize(14);
+            doc.setFont('courier', 'bold');
+            doc.setTextColor(30, 116, 188);
+            doc.text(sanitizeText('Dormant Thesis Details'), 14, yPos);
+            yPos += 5;
+
             // Table data - sanitize all titles to handle special characters
+            const detailedDormantRows = exportRows.map(row => [
+                sanitizeText(row.title),
+                sanitizeText(row.year),
+                sanitizeText(row.lastAccessed),
+                row.daysInactive.toString(),
+                row.views.toString(),
+                sanitizeText(row.reason),
+                sanitizeText(row.action)
+            ]);
+
             const tableData = dormantMaterialsList.map(material => [
                 sanitizeText(material.title || '—'),
                 material.created_at ? new Date(material.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
@@ -3159,16 +3386,24 @@ const AdminDashboard = () => {
                 (material.view_count || 0).toString()
             ]);
 
+            void tableData;
+
             autoTable(doc, {
-                head: [['Title', 'Uploaded', 'Last Accessed', 'Views']],
-                body: tableData,
+                head: [['Title', 'Year', 'Last Accessed', 'Inactive', 'Views', 'Reason', 'Action']],
+                body: detailedDormantRows,
                 startY: yPos,
                 margin: 14,
+                theme: 'striped',
+                headStyles: { fillColor: [21, 90, 143], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+                bodyStyles: { fontSize: 7, cellPadding: 2, valign: 'top' },
                 columnStyles: {
-                    0: { cellWidth: 100, halign: 'left' },
-                    1: { cellWidth: 30, halign: 'center' },
-                    2: { cellWidth: 30, halign: 'center' },
-                    3: { cellWidth: 20, halign: 'center' }
+                    0: { cellWidth: 58, halign: 'left' },
+                    1: { cellWidth: 14, halign: 'center' },
+                    2: { cellWidth: 22, halign: 'center' },
+                    3: { cellWidth: 18, halign: 'right' },
+                    4: { cellWidth: 14, halign: 'right' },
+                    5: { cellWidth: 28, halign: 'left' },
+                    6: { cellWidth: 28, halign: 'left' }
                 },
                 didDrawPage: (data) => {
                     const pageCount = doc.getNumberOfPages();
@@ -3182,7 +3417,7 @@ const AdminDashboard = () => {
                 }
             });
 
-            doc.save(`LitPathAI_DormantMaterials_${new Date().toISOString().slice(0, 10)}.pdf`);
+            doc.save(`LitPathAI_DormantMaterials_KPI_${new Date().toISOString().slice(0, 10)}.pdf`);
             showToast('Dormant materials exported to PDF successfully!', 'success');
         } catch (error) {
             console.error("Dormant materials PDF export failed:", error);
@@ -3372,7 +3607,7 @@ const AdminDashboard = () => {
                                             </label>
                                             <div className="grid grid-cols-2 gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm">
                                                 <span className="text-gray-600">Client Type:</span>
-                                                <span className="font-medium">{selectedFeedback.client_type || '—'}</span>
+                                                <span className="font-medium">{getDisplayClientType(selectedFeedback)}</span>
                                                 <span className="text-gray-600">Date of Interaction:</span>
                                                 <span className="font-medium">{selectedFeedback.date ? new Date(selectedFeedback.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}</span>
                                                 <span className="text-gray-600">Sex:</span>
@@ -3791,11 +4026,11 @@ const AdminDashboard = () => {
                         <div>
                             <button 
                                 onClick={() => setIsDashboardExpanded(!isDashboardExpanded)}
-                                className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${activeTab === 'overview' || activeTab === 'ratings' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
+                                className={`w-full flex items-center p-3 rounded-lg transition-colors ${isSidebarOpen ? 'justify-between' : 'justify-center'} ${activeTab === 'overview' || activeTab === 'ratings' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
                             >
-                                <div className="flex items-center">
+                                <div className={`flex items-center ${isSidebarOpen ? '' : 'justify-center'}`}>
                                     <LayoutDashboard size={20} className="flex-shrink-0" />
-                                    <span className={`ml-3 text-sm whitespace-nowrap transition-all duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>Dashboard</span>
+                                    <span className={`text-sm whitespace-nowrap transition-all duration-300 ${isSidebarOpen ? 'ml-3 opacity-100' : 'ml-0 opacity-0 w-0 overflow-hidden'}`}>Dashboard</span>
                                 </div>
                                 {isSidebarOpen && (
                                     <ChevronDown 
@@ -3807,23 +4042,23 @@ const AdminDashboard = () => {
                             
                             {/* Dashboard Child Items */}
                             {isDashboardExpanded && (
-                                <div className="ml-4 mt-2 space-y-1 border-l-2 border-gray-200 pl-2">
+                                <div className={`mt-2 space-y-1 ${isSidebarOpen ? 'ml-4 border-l-2 border-gray-200 pl-2' : 'ml-0 border-l-0 pl-0'}`}>
                                     {/* Usage Analytics */}
                                     <button 
                                         onClick={() => handleTabChange('overview')}
-                                        className={`w-full flex items-center p-3 rounded-lg text-sm transition-colors ${activeTab === 'overview' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
+                                        className={`w-full flex items-center p-3 rounded-lg text-sm transition-colors ${isSidebarOpen ? 'justify-start' : 'justify-center'} ${activeTab === 'overview' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
                                     >
                                         <TrendingUp size={18} className="flex-shrink-0" />
-                                        <span className={`ml-3 whitespace-nowrap transition-all duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>Usage Analytics</span>
+                                        <span className={`whitespace-nowrap transition-all duration-300 ${isSidebarOpen ? 'ml-3 opacity-100' : 'ml-0 opacity-0 w-0 overflow-hidden'}`}>Usage Analytics</span>
                                     </button>
                                     
                                     {/* Material Ratings */}
                                     <button 
                                         onClick={() => handleTabChange('ratings')}
-                                        className={`w-full flex items-center p-3 rounded-lg text-sm transition-colors ${activeTab === 'ratings' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
+                                        className={`w-full flex items-center p-3 rounded-lg text-sm transition-colors ${isSidebarOpen ? 'justify-start' : 'justify-center'} ${activeTab === 'ratings' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
                                     >
                                         <Star size={18} className="flex-shrink-0" />
-                                        <span className={`ml-3 whitespace-nowrap transition-all duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>Material Ratings</span>
+                                        <span className={`whitespace-nowrap transition-all duration-300 ${isSidebarOpen ? 'ml-3 opacity-100' : 'ml-0 opacity-0 w-0 overflow-hidden'}`}>Material Ratings</span>
                                     </button>
                                 </div>
                             )}
@@ -3832,10 +4067,10 @@ const AdminDashboard = () => {
                         {/* Feedback Manager - Top Level */}
                         <button 
                             onClick={() => handleTabChange('feedback')} 
-                            className={`w-full flex items-center p-3 rounded-lg transition-colors ${activeTab === 'feedback' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
+                            className={`w-full flex items-center p-3 rounded-lg transition-colors ${isSidebarOpen ? 'justify-start' : 'justify-center'} ${activeTab === 'feedback' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
                         >
                             <MessageSquare size={20} className="flex-shrink-0" />
-                            <span className={`ml-3 text-sm whitespace-nowrap transition-all duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>Feedback Manager</span>
+                            <span className={`text-sm whitespace-nowrap transition-all duration-300 ${isSidebarOpen ? 'ml-3 opacity-100' : 'ml-0 opacity-0 w-0 overflow-hidden'}`}>Feedback Manager</span>
                         </button>
                     </nav>
                     <div className={`p-4 border-t border-gray-100 text-xs text-gray-400 text-center whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 h-0 p-0'}`}>
@@ -5158,11 +5393,7 @@ const AdminDashboard = () => {
                                                 <div className="absolute top-full right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-30 min-w-[160px] p-1">
                                                     {[
                                                         { value: 'All', label: 'All Client Types' },
-                                                        { value: 'Student', label: 'Student' },
-                                                        { value: 'Faculty', label: 'Faculty' },
-                                                        { value: 'DOST', label: 'DOST' },
-                                                        { value: 'Librarian', label: 'Librarian' },
-                                                        { value: 'Guest', label: 'Guest' }
+                                                        ...clientTypeFilterOptions.map(option => ({ value: option, label: option }))
                                                     ].map(option => (
                                                         <button
                                                             key={option.value}
@@ -5273,7 +5504,7 @@ const AdminDashboard = () => {
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded text-xs border border-blue-100 font-medium">
-                                                                {fb.client_type || '—'}
+                                                                {getDisplayClientType(fb)}
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -5725,19 +5956,31 @@ const AdminDashboard = () => {
                                             handleOpenDormantMaterialsModal();
                                         }
                                     }}
-                                    className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group relative"
+
+                                    title="Open dormant materials KPI details"
+                                    className="group relative bg-white p-4 rounded-lg shadow-sm border border-blue-100 cursor-pointer hover:shadow-md hover:border-[#1E74BC] hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-[#1E74BC] focus:ring-offset-2 transition-all"
                                 >
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center justify-between gap-2">
                                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
                                             <LogOut size={18} className="text-blue-600" /> Dormant Materials
                                         </p>
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-[#1E74BC] border border-blue-100 group-hover:bg-white">
+                                            View KPI
+                                            <ChevronRight size={12} />
+                                        </span>
+                                    </div>
+                                    <div className="flex items-start justify-between gap-3 mt-2">
+                                        <div>
+                                            <p className="text-2xl font-bold text-gray-900">{formatNumber(dormantCount)}</p>
+                                            <p className="text-xs text-gray-400 mt-1">Dormant (30+ days)</p>
+                                        </div>
                                         <div className="relative group pointer-events-none">
                                             <Info size={14} className="text-gray-400 cursor-help hover:text-gray-600" />
-                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none w-64">
-                                                <div className="bg-gray-800 text-white text-[10px] px-3 py-2 rounded shadow-lg text-center">
+                                            <div className="absolute bottom-full right-0 mb-2 hidden group-hover:flex flex-col items-end z-50 pointer-events-none w-72 max-w-[min(18rem,calc(100vw-2rem))]">
+                                                <div className="bg-gray-800 text-white text-[10px] px-3 py-2 rounded shadow-lg text-center leading-snug whitespace-normal">
                                                     Materials not accessed for 30+ days or never accessed (and uploaded 30+ days ago). Click to see details.
                                                 </div>
-                                                <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-gray-800"></div>
+                                                <div className="mr-2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-gray-800"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -6389,25 +6632,25 @@ const AdminDashboard = () => {
             {/* Dormant Materials Modal */}
             {showDormantMaterialsModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
                         {/* Modal Header with Export Buttons */}
                         <div className="bg-gradient-to-r from-[#1E74BC] to-[#155a8f] px-6 py-4 flex items-center justify-between">
                             <div>
                                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                                     <LogOut size={24} className="text-blue-200" />
-                                    Dormant Materials
+                                    Dormant Materials KPI
                                 </h2>
                                 <p className="text-blue-100 text-sm mt-1">
-                                    {dormantMaterialsList.length} material{dormantMaterialsList.length !== 1 ? 's' : ''} not accessed for 30+ days
+                                    Detailed inactivity insights and export-ready thesis list
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <button
-                                    onClick={handleDormantMaterialsExportCSV}
+                                    onClick={handleDormantMaterialsExportExcel}
                                     className="bg-white text-[#1E74BC] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-blue-50 transition-colors flex items-center gap-2"
                                 >
                                     <Download size={16} />
-                                    CSV
+                                    Excel
                                 </button>
                                 <button
                                     onClick={handleDormantMaterialsExportPDF}
@@ -6427,9 +6670,127 @@ const AdminDashboard = () => {
                         </div>
 
                         {/* Modal Content */}
-                        <div className="flex-1 overflow-y-auto p-6">
+                        <div className="flex-1 overflow-y-auto p-4">
+                            {dormantMaterialsList.length > 0 && (() => {
+                                const kpis = getDormantKpis();
+                                const rows = getDormantExportRows();
+                                const highRiskRows = rows.filter(row => row.daysInactive >= 90);
+                                const zeroViewRows = rows.filter(row => row.views === 0);
+
+                                return (
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                            <div className="border border-blue-100 bg-blue-50 rounded-lg p-3 min-h-[112px]">
+                                                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Dormant Theses</p>
+                                                <p className="text-3xl font-bold text-gray-900 mt-2">{formatNumber(kpis.total)}</p>
+                                                <p className="text-xs text-blue-700 mt-1">Inactive or never accessed</p>
+                                            </div>
+                                            <div className="border border-amber-100 bg-amber-50 rounded-lg p-3 min-h-[112px]">
+                                                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Avg. Inactive Days</p>
+                                                <p className="text-3xl font-bold text-gray-900 mt-2">{formatNumber(kpis.averageInactiveDays)}</p>
+                                                <p className="text-xs text-amber-700 mt-1">Longest: {formatNumber(kpis.longestInactiveDays)} days</p>
+                                            </div>
+                                            <div className="border border-red-100 bg-red-50 rounded-lg p-3 min-h-[112px]">
+                                                <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">Zero-View Rate</p>
+                                                <p className="text-3xl font-bold text-gray-900 mt-2">{kpis.zeroViewsPercent}%</p>
+                                                <p className="text-xs text-red-700 mt-1">{formatNumber(kpis.zeroViews)} theses with no views</p>
+                                            </div>
+                                            <div className="border border-slate-200 bg-slate-50 rounded-lg p-3 min-h-[112px]">
+                                                <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Avg. Views</p>
+                                                <p className="text-3xl font-bold text-gray-900 mt-2">{kpis.averageViews}</p>
+                                                <p className="text-xs text-slate-600 mt-1">{formatNumber(kpis.totalViews)} total dormant views</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 items-stretch">
+                                            <div className="lg:col-span-2 border border-gray-200 rounded-lg overflow-hidden">
+                                                <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <h3 className="text-sm font-bold text-gray-800">Dormant Thesis Inventory</h3>
+                                                        <p className="text-xs text-gray-500">Includes inactivity reason, days inactive, views, and recommended action.</p>
+                                                    </div>
+                                                    <span className="text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded px-2 py-1">
+                                                        {rows.length} records
+                                                    </span>
+                                                </div>
+                                                <div className="overflow-auto max-h-[430px]">
+                                                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                                                        <thead className="bg-white">
+                                                            <tr>
+                                                                <th className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide">Title</th>
+                                                                <th className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide">Last Accessed</th>
+                                                                <th className="px-3 py-2.5 text-right text-[11px] font-bold text-gray-500 uppercase tracking-wide">Inactive</th>
+                                                                <th className="px-3 py-2.5 text-right text-[11px] font-bold text-gray-500 uppercase tracking-wide">Views</th>
+                                                                <th className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide">Action</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="bg-white divide-y divide-gray-100">
+                                                            {rows.map((row, index) => (
+                                                                <tr key={`${row.file}-${index}`} className="hover:bg-blue-50/60">
+                                                                    <td className="px-3 py-2.5 max-w-[320px]">
+                                                                        <p className="font-semibold text-gray-900 line-clamp-2" title={row.title}>{row.title}</p>
+                                                                        <p className="text-xs text-gray-500 mt-1">{row.year} | {row.reason}</p>
+                                                                    </td>
+                                                                    <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{row.lastAccessed}</td>
+                                                                    <td className="px-3 py-2.5 text-right">
+                                                                        <span className={`font-bold ${row.daysInactive >= 90 ? 'text-red-700' : 'text-amber-700'}`}>
+                                                                            {formatNumber(row.daysInactive)} days
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="px-3 py-2.5 text-right font-semibold text-gray-700">{formatNumber(row.views)}</td>
+                                                                    <td className="px-3 py-2.5 text-gray-600">{row.action}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <div className="border border-gray-200 rounded-lg p-4 bg-white h-full">
+                                                    <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                                        <AlertCircle size={16} className="text-red-600" />
+                                                        Attention Signals
+                                                    </h3>
+                                                    <div className="mt-4 space-y-3 text-sm">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-gray-600">90+ days inactive</span>
+                                                            <span className="font-bold text-red-700">{formatNumber(highRiskRows.length)}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-gray-600">Zero views</span>
+                                                            <span className="font-bold text-gray-900">{formatNumber(zeroViewRows.length)}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-gray-600">Previously accessed</span>
+                                                            <span className="font-bold text-blue-700">{formatNumber(kpis.previouslyAccessed)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 h-full">
+                                                    <h3 className="text-sm font-bold text-gray-800">Export Package</h3>
+                                                    <div className="mt-4 space-y-3 text-sm">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-gray-600">PDF report</span>
+                                                            <span className="font-bold text-[#1E74BC]">KPI + list</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-gray-600">Excel workbook</span>
+                                                            <span className="font-bold text-[#1E74BC]">Shareable</span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 pt-1">
+                                                            Includes inactivity days, view count, dormancy reason, and recommended action.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                             {dormantMaterialsList.length > 0 ? (
-                                <div className="space-y-3">
+                                <div className="hidden">
                                     {dormantMaterialsList.map((material, index) => (
                                         <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                                             <div className="flex items-start justify-between gap-4">

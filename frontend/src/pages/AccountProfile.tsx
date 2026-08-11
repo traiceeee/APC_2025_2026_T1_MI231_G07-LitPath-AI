@@ -18,6 +18,7 @@ const AccountProfile = () => {
         school_level: '',
         school_name: '',
         client_type: '',
+        client_type_other: '',
         sex: '',
         age: '',
         region: ''
@@ -44,14 +45,19 @@ const AccountProfile = () => {
             email: user.email || '',
             school_level: user.school_level || '',
             school_name: user.school_name || '',
-            client_type: user.client_type || '',
+            client_type: ['Student', 'DOST Employee', 'Other Government Employee', 'Librarian/Library Staff', 'Teaching Personnel', 'Administrative Personnel', 'Researcher', 'Others'].includes(user.client_type)
+                ? user.client_type
+                : (user.client_type ? 'Others' : ''),
+            client_type_other: ['Student', 'DOST Employee', 'Other Government Employee', 'Librarian/Library Staff', 'Teaching Personnel', 'Administrative Personnel', 'Researcher', 'Others'].includes(user.client_type)
+                ? ''
+                : (user.client_type || ''),
             sex: user.sex || '',
             age: user.age || '',
             region: user.region || ''
         });
     }, [user, navigate]);
 
-    const clientTypeChoices = ['Student', 'DOST Employee', 'Other Government Employee', 'Librarian/Library Staff', 'Teaching Personnel', 'Administrative Personnel', 'Researcher'];
+    const clientTypeChoices = ['Student', 'DOST Employee', 'Other Government Employee', 'Librarian/Library Staff', 'Teaching Personnel', 'Administrative Personnel', 'Researcher', 'Others'];
     const sexChoices = ['Female', 'Male', 'Prefer not to say'];
     const ageChoices = [
         '10 and below', '11-15', '16-20', '21-25', '26-30', '31-35',
@@ -65,6 +71,7 @@ const AccountProfile = () => {
         'Junior High School', 'Senior High School', 'Undergraduate', 'Graduate', 'Postgraduate'
     ];
     const isStudentClient = formData.client_type === 'Student';
+    const isOtherClient = formData.client_type === 'Others';
 
     const handleProfileSave = async () => {
         setLoading(true);
@@ -199,6 +206,7 @@ const AccountProfile = () => {
                                     setFormData(prev => ({
                                         ...prev,
                                         client_type: nextClientType,
+                                        client_type_other: nextClientType === 'Others' ? prev.client_type_other : '',
                                         school_level: nextClientType === 'Student' ? prev.school_level : '',
                                         school_name: nextClientType === 'Student' ? prev.school_name : ''
                                     }));
@@ -208,6 +216,18 @@ const AccountProfile = () => {
                                 {clientTypeChoices.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                             </select>
                         </div>
+
+                        {isOtherClient && (
+                            <div>
+                                <label className="text-sm font-medium text-gray-700">Please specify</label>
+                                <input
+                                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg"
+                                    value={formData.client_type_other}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, client_type_other: e.target.value }))}
+                                    placeholder="Enter your client type"
+                                />
+                            </div>
+                        )}
 
                         {isStudentClient && (
                             <>
@@ -321,3 +341,4 @@ const AccountProfile = () => {
 };
 
 export default AccountProfile;
+ 

@@ -3,7 +3,7 @@ import { Modal, Button, Rate, Tag, Input } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 
 const ReviewFeedbackModal = ({ feedback, onClose }) => {
-  
+
   // Enhanced CSS styles for better responsive design
   const styles = `
     .review-feedback-modal .ant-modal-body {
@@ -142,83 +142,83 @@ const ReviewFeedbackModal = ({ feedback, onClose }) => {
       .review-feedback-modal .ant-modal-body {
         padding: 12px;
       }
-      
+
       .review-feedback-content {
         gap: 12px;
       }
-      
+
       .single-column-form {
         padding: 12px;
         gap: 12px;
       }
-      
+
       .section {
         padding: 12px;
       }
-      
+
       .section h3 {
         font-size: 15px;
         margin-bottom: 12px;
       }
-      
+
       .form-item {
         margin-bottom: 12px;
       }
-      
+
       .form-item label {
         font-size: 13px;
         margin-bottom: 6px;
       }
-      
+
       .profile-row {
         flex-direction: column;
         gap: 4px;
       }
-      
+
       .profile-row .label {
         font-size: 13px;
         margin-bottom: 2px;
       }
-      
+
       .profile-row .value {
         font-size: 13px;
       }
-      
+
       .rating {
         flex-direction: column;
         align-items: flex-start;
       }
-      
+
       .rating .label {
         margin-right: 0;
         margin-bottom: 8px;
       }
-      
+
       .rating-text {
         margin-left: 0;
       }
     }
-    
+
     @media (max-width: 480px) {
       .review-feedback-modal .ant-modal-body {
         padding: 8px;
       }
-      
+
       .single-column-form {
         padding: 8px;
         gap: 10px;
       }
-      
+
       .section {
         padding: 10px;
       }
-      
+
       .consent-status {
         flex-direction: column;
         align-items: flex-start;
         gap: 4px;
       }
-      
+
       .client-profile, .feedback-evaluation {
         padding: 8px;
       }
@@ -230,7 +230,7 @@ const ReviewFeedbackModal = ({ feedback, onClose }) => {
     const styleElement = document.createElement('style');
     styleElement.textContent = styles;
     document.head.appendChild(styleElement);
-    
+
     // Cleanup function to remove styles when component unmounts
     return () => {
       document.head.removeChild(styleElement);
@@ -260,14 +260,14 @@ const ReviewFeedbackModal = ({ feedback, onClose }) => {
               Consent given
             </div>
           </div>
-          
+
           {/* CLIENT PROFILE */}
           <div className="form-item">
             <label>CLIENT PROFILE</label>
             <div className="client-profile">
               <div className="profile-row">
                 <span className="label">Client Type:</span>
-                <span className="value">Citizen</span>
+                <span className="value">Others</span>
               </div>
               <div className="profile-row">
                 <span className="label">Date of Interaction:</span>
@@ -291,7 +291,7 @@ const ReviewFeedbackModal = ({ feedback, onClose }) => {
               </div>
             </div>
           </div>
-          
+
           {/* FEEDBACK & EVALUATION */}
           <div className="form-item">
             <label>FEEDBACK & EVALUATION</label>
@@ -309,26 +309,26 @@ const ReviewFeedbackModal = ({ feedback, onClose }) => {
               </div>
             </div>
           </div>
-          
+
           {/* Analysis & Action Section - integrated in the same layout */}
           <div className="analysis-action-section">
             <div className="analysis-action-title">Analysis & Action</div>
-            
+
             <div className="form-item">
               <label>Status *</label>
               <Tag color="gold">Pending</Tag>
             </div>
-            
+
             <div className="form-item">
               <label>Category *</label>
               <Tag color="blue">Issue</Tag>
             </div>
-            
+
             <div className="form-item">
               <label>Is this valid? *</label>
               <Input placeholder="Enter your assessment" />
             </div>
-            
+
             <div className="form-item">
               <label>Is it doable? *</label>
               <Input placeholder="Enter your assessment" />

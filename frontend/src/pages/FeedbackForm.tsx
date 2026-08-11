@@ -20,7 +20,8 @@ const FeedbackForm = ({ embedded = false, onClose }: FeedbackFormProps) => {
         user_id: userId || '',
         session_id: sessionId,
         consent_given: false,
-        client_type: user?.client_type || '',
+        client_type: '',
+        client_type_other: '',
         date: new Date().toISOString().split('T')[0],
         sex: user?.sex || '',
         age: user?.age || '',
@@ -38,10 +39,16 @@ const FeedbackForm = ({ embedded = false, onClose }: FeedbackFormProps) => {
     useEffect(() => {
         if (!user) return;
 
+        const clientTypeChoices = ['Student', 'DOST Employee', 'Other Government Employee', 'Librarian/Library Staff', 'Teaching Personnel', 'Administrative Personnel', 'Researcher', 'Others'];
+        const resolvedClientType = user.client_type && clientTypeChoices.includes(user.client_type)
+            ? user.client_type
+            : (user.client_type ? 'Others' : '');
+
         setFormData(prev => ({
             ...prev,
             user_id: userId || prev.user_id,
-            client_type: prev.client_type || user.client_type || '',
+            client_type: prev.client_type || resolvedClientType,
+            client_type_other: prev.client_type_other || (resolvedClientType === 'Others' ? (user.client_type || '') : ''),
             category: prev.category || user.category || '',
             sex: prev.sex || user.sex || '',
             age: prev.age || user.age || '',
@@ -54,14 +61,14 @@ const FeedbackForm = ({ embedded = false, onClose }: FeedbackFormProps) => {
     const [submitStatus, setSubmitStatus] = useState(null); // 'success', 'error', or null
 
     const clientTypeChoices = [
-        { value: 'Citizen', label: 'Citizen' },
         { value: 'Student', label: 'Student' },
         { value: 'DOST Employee', label: 'DOST Employee' },
         { value: 'Other Government Employee', label: 'Other Government Employee' },
         { value: 'Librarian/Library Staff', label: 'Librarian/Library Staff' },
         { value: 'Teaching Personnel', label: 'Teaching Personnel' },
         { value: 'Administrative Personnel', label: 'Administrative Personnel' },
-        { value: 'Researcher', label: 'Researcher' }
+        { value: 'Researcher', label: 'Researcher' },
+        { value: 'Others', label: 'Others' }
     ];
 
     const sexChoices = [
@@ -123,6 +130,7 @@ const FeedbackForm = ({ embedded = false, onClose }: FeedbackFormProps) => {
                 ...prev,
                 school_level: '',
                 school_name: '',
+                client_type_other: value === 'Others' ? prev.client_type_other : '',
                 company: '',
             }));
         }
@@ -168,10 +176,8 @@ const FeedbackForm = ({ embedded = false, onClose }: FeedbackFormProps) => {
                 newErrors.school_name = 'School Name is required';
             }
         }
-        if (formData.client_type === 'Citizen') {
-            if (!formData.company) {
-                newErrors.company = 'Company or N/A is required';
-            }
+        if (formData.client_type === 'Others' && !formData.client_type_other.trim()) {
+            newErrors.client_type_other = 'Please specify your client type';
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -377,22 +383,21 @@ const FeedbackForm = ({ embedded = false, onClose }: FeedbackFormProps) => {
                                 </>
                             )}
 
-                            {/* Conditional Fields for Citizen */}
-                            {formData.client_type === 'Citizen' && (
-                                <div className="mb-4">
+                            {formData.client_type === 'Others' && (
+                                <div className="mb-4">  {/* removed md:col-span-2 */}
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Company or N/A <span className="text-red-500">*</span>
+                                        Please specify <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="text"
-                                        name="company"
-                                        value={formData.company}
+                                        name="client_type_other"
+                                        value={formData.client_type_other}
                                         onChange={handleChange}
                                         className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Enter company name or N/A"
+                                        placeholder="Enter your client type"
                                     />
-                                    {errors.company && (
-                                        <p className="text-red-500 text-sm">{errors.company}</p>
+                                    {errors.client_type_other && (
+                                        <p className="text-red-500 text-sm">{errors.client_type_other}</p>
                                     )}
                                 </div>
                             )}

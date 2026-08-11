@@ -24,17 +24,17 @@ from django.utils import timezone
 def populate_csm_feedback():
     """Populate CSM feedback table with sample data"""
     print("Populating CSM Feedback data...")
-    
-    client_types = ['Citizen', 'Business', 'Government']
+
+    client_types = ['Others', 'Business', 'Government']
     sexes = ['Female', 'Male', 'Prefer not to say']
     ages = ['16-20', '21-25', '26-30', '31-35', '36-40', '41-45']
     regions = ['NCR', 'R03', 'R04A', 'R06', 'R07', 'R10', 'R11']
     categories = ['Student', 'DOST Employee', 'Other Government Employee', 'Librarian/Library Staff', 'Teaching Personnel', 'Administrative Personnel', 'Researcher']
     ratings = [1, 2, 3, 4, 5]
-    
+
     admin_categories = ['Bug', 'Feature Request', 'Content Request', 'Compliment', 'Issue / Bug', 'For Improvement']
     statuses = ['Pending', 'Reviewed', 'Resolved']
-    
+
     research_interests_options = [
         'Renewable energy sources',
         'Biomedical engineering',
@@ -52,7 +52,7 @@ def populate_csm_feedback():
         'Education technology',
         'Artificial intelligence'
     ]
-    
+
     missing_content_options = [
         'More recent studies on renewable energy',
         'Information on climate adaptation strategies',
@@ -65,7 +65,7 @@ def populate_csm_feedback():
         'Data on food processing techniques',
         'Research on water purification methods'
     ]
-    
+
     comments_options = [
         'The search feature is very helpful but could be faster.',
         'Great resource for academic research.',
@@ -83,7 +83,7 @@ def populate_csm_feedback():
         'I encountered some broken links during my research.',
         'The recommendation system is impressive.'
     ]
-    
+
     for i in range(100):  # Create 100 sample CSM feedback entries
         # Randomly select values
         client_type = random.choice(client_types)
@@ -92,31 +92,31 @@ def populate_csm_feedback():
         region = random.choice(regions)
         category = random.choice(categories)
         rating = random.choice(ratings)
-        
+
         # Calculate date (random date within the past year)
         days_back = random.randint(1, 365)
         feedback_date = (datetime.now() - timedelta(days=days_back)).date()
-        
+
         # Create research interests text
         research_interests = ', '.join(random.sample(research_interests_options, random.randint(1, 3)))
-        
+
         # Create missing content text
         missing_content = random.choice(missing_content_options) if random.random() > 0.3 else None
-        
+
         # Create comment
         comment = random.choice(comments_options) if random.random() > 0.2 else None
-        
+
         # Admin triage info
         admin_category = random.choice(admin_categories) if random.random() > 0.4 else None
         status = random.choice(statuses)
-        
+
         # Validity and feasibility (only set if status is not pending)
         is_valid = random.choice([True, False]) if status != 'Pending' else None
         validity_remarks = f"This feedback {'is' if is_valid else 'is not'} valid and important." if is_valid is not None else None
-        
+
         is_doable = random.choice([True, False]) if status != 'Pending' else None
         feasibility_remarks = f"This request {'is' if is_doable else 'is not'} feasible to implement." if is_doable is not None else None
-        
+
         # Create and save the feedback entry
         csm_feedback = CSMFeedback(
             user_id=f"user_{i+1000}",
@@ -139,20 +139,20 @@ def populate_csm_feedback():
             is_doable=is_doable,
             feasibility_remarks=feasibility_remarks
         )
-        
+
         csm_feedback.save()
         print(f"Created CSM Feedback #{i+1}")
-    
+
     print("Successfully populated CSM Feedback data!")
 
 
 def populate_general_feedback():
     """Populate general feedback table with sample data"""
     print("Populating General Feedback data...")
-    
+
     statuses = ['Pending', 'Reviewed', 'Resolved']
     categories = ['Positive', 'Issue', 'For Improvement']
-    
+
     queries = [
         'renewable energy policies',
         'biomedical applications',
@@ -170,7 +170,7 @@ def populate_general_feedback():
         'education technology',
         'artificial intelligence ethics'
     ]
-    
+
     comments = [
         'Very helpful results',
         'Found what I needed',
@@ -188,7 +188,7 @@ def populate_general_feedback():
         'More recent data needed',
         'Citation feature helpful'
     ]
-    
+
     for i in range(50):  # Create 50 sample feedback entries
         # Randomly select values
         query = random.choice(queries)
@@ -197,14 +197,14 @@ def populate_general_feedback():
         comment = random.choice(comments) if random.random() > 0.3 else None
         status = random.choice(statuses)
         category = random.choice(categories) if random.random() > 0.4 else None
-        
+
         # Validity and feasibility (only set if status is not pending)
         is_valid = random.choice([True, False]) if status != 'Pending' else None
         validity_remarks = f"This feedback {'is' if is_valid else 'is not'} valid." if is_valid is not None else None
-        
+
         is_doable = random.choice([True, False]) if status != 'Pending' else None
         feasibility_remarks = f"This request {'is' if is_doable else 'is not'} doable." if is_doable is not None else None
-        
+
         # Create and save the feedback entry
         feedback = Feedback(
             user_id=f"user_{i+3000}",
@@ -219,17 +219,17 @@ def populate_general_feedback():
             is_doable=is_doable,
             feasibility_remarks=feasibility_remarks
         )
-        
+
         feedback.save()
         print(f"Created General Feedback #{i+1}")
-    
+
     print("Successfully populated General Feedback data!")
 
 
 def populate_materials():
     """Populate materials table with sample data"""
     print("Populating Materials data...")
-    
+
     titles = [
         'Sustainable Energy Solutions for Rural Philippines',
         'Impact of Climate Change on Philippine Agriculture',
@@ -247,7 +247,7 @@ def populate_materials():
         'Nutritional Quality of Biofortified Rice Varieties',
         'Blockchain Applications in Supply Chain Management'
     ]
-    
+
     authors = [
         'Santos, Maria C.',
         'Reyes, Juan D.',
@@ -265,7 +265,7 @@ def populate_materials():
         'Co, Jennifer T.',
         'Lopez, Ricardo U.'
     ]
-    
+
     degrees = [
         'Bachelor of Science in Computer Science',
         'Master of Science in Environmental Engineering',
@@ -283,7 +283,7 @@ def populate_materials():
         'Master of Business Administration',
         'Bachelor of Science in Physics'
     ]
-    
+
     schools = [
         'University of the Philippines Diliman',
         'Ateneo de Manila University',
@@ -301,7 +301,7 @@ def populate_materials():
         'Bulacan State University',
         'Cebu Technological University'
     ]
-    
+
     subjects_base = [
         'Computer Science',
         'Environmental Science',
@@ -324,24 +324,24 @@ def populate_materials():
         'Civil Engineering',
         'Electronics Engineering'
     ]
-    
+
     for i in range(50):  # Create 50 sample materials
         title = random.choice(titles)
         author = random.choice(authors)
         year = random.randint(2018, 2026)
         degree = random.choice(degrees)
         school = random.choice(schools)
-        
+
         # Generate 3-6 random subjects for each material
         subjects = random.sample(subjects_base, random.randint(3, 6))
-        
+
         # Create abstract
         random_subject = random.choice(subjects_base)
         abstract = f"This study examines various aspects of {title.lower()}. The research employed both quantitative and qualitative methodologies to analyze key factors affecting {random_subject.lower()}. Results indicate significant improvements in efficiency and effectiveness when implementing the proposed solutions. The findings contribute to the growing body of knowledge on sustainable development practices in the {random_subject.lower()} sector."
-        
+
         # Create file name
         file_name = f"thesis_{i+1:03d}_{title.lower().replace(' ', '_')[:30]}.pdf"
-        
+
         # Create and save the material
         material = Material(
             file=file_name,
@@ -353,27 +353,27 @@ def populate_materials():
             subjects=subjects,
             school=school
         )
-        
+
         material.save()
         print(f"Created Material #{i+1}: {title}")
-    
+
     print("Successfully populated Materials data!")
 
 
 if __name__ == '__main__':
     print("Starting to populate database with sample data...")
-    
+
     try:
         # Populate all tables
         populate_csm_feedback()
         populate_general_feedback()
         populate_materials()
-        
+
         print("\nDatabase successfully populated with sample data!")
         print("- 100 CSM Feedback entries")
         print("- 50 General Feedback entries") 
         print("- 50 Material entries")
-        
+
     except Exception as e:
         print(f"An error occurred while populating the database: {e}")
         import traceback

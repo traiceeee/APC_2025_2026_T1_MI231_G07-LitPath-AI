@@ -1,18 +1,23 @@
 // @ts-nocheck
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
     AlertCircle,
     CheckCircle2,
+    ChevronDown,
     Database,
     Edit2,
     HardDriveDownload,
     KeyRound,
+    LayoutDashboard,
     Loader2,
     LogOut,
+    Menu,
     RefreshCw,
     Save,
     Search,
+    Settings,
     ShieldCheck,
     UserRoundCog,
     UserRoundPlus,
@@ -21,6 +26,7 @@ import {
     X,
     Trash2,
 } from 'lucide-react';
+import dostLogo from '../../assets/images/dost-logo.png';
 import { API_BASE_URL, apiHeaders } from '../../services/api';
 import { getPasswordRequirementChecks, validatePasswordStrength } from '../../lib/passwordValidation';
 import PasswordRequirements from '../../components/PasswordRequirements';
@@ -153,13 +159,18 @@ const SYSTEM_LOG_PAGE_SIZE = 10;
 
 const ITAdminDashboard = () => {
     const { user, logout } = useAuth();
+    const navigate = useNavigate();
+    const userMenuRef = useRef(null);
 
     const tabs = [
-        { key: 'accounts', label: 'Account Management' },
-        { key: 'security', label: 'System Logs' },
-        { key: 'system', label: 'System Settings' },
+        { key: 'accounts', label: 'Account Management', icon: Users },
+        { key: 'security', label: 'System Logs', icon: ShieldCheck },
+        { key: 'system', label: 'System Settings', icon: Settings },
     ];
     const [activeTab, setActiveTab] = useState('accounts');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [showUserMenu, setShowUserMenu] = useState(false);
+    const [currentDateTime, setCurrentDateTime] = useState(new Date());
 
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -302,8 +313,25 @@ const ITAdminDashboard = () => {
     useEffect(() => {
         loadAccounts();
         loadSettings();
-        loadDatabaseAdminData();
         loadSystemLogs();
+    }, []);
+
+    useEffect(() => {
+        const timer = window.setInterval(() => {
+            setCurrentDateTime(new Date());
+        }, 1000);
+        return () => window.clearInterval(timer);
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+                setShowUserMenu(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     useEffect(() => {
@@ -818,57 +846,127 @@ const ITAdminDashboard = () => {
     const configuredIntegrations = Object.values(systemSettings.environment_config || {}).filter(Boolean).length;
     const currentStructure = databaseStructures.find((record) => record.is_current);
     const completedBackups = backupRecords.filter((record) => record.status === 'completed').length;
+    const activeTabLabel = tabs.find((tab) => tab.key === activeTab)?.label || 'IT Administration';
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#f8fafc,_#eef2ff_38%,_#e2e8f0_100%)] text-slate-900">
-            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-                <div className="mb-8 overflow-hidden rounded-[2rem] border border-white/70 bg-white/85 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
-                    <div className="flex flex-col gap-6 border-b border-slate-200/70 p-6 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">System Console</p>
-                            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">IT Administrator</h1>
-                            <p className="mt-3 max-w-3xl text-sm text-slate-600">
-                                Manage user accounts, assign roles, reset access, and control activation from a single admin surface.
-                            </p>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-3">
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
-                                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Signed in as</p>
-                                <p className="text-sm font-semibold text-slate-900">{user?.full_name || user?.username || 'IT Administrator'}</p>
-                                <p className="text-xs text-slate-500">{getRoleLabel(user?.role)}</p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={logout}
-                                className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-                            >
-                                <LogOut className="h-4 w-4" />
-                                Logout
-                            </button>
+        <div className="flex h-screen flex-col overflow-hidden bg-gray-50 text-slate-900">
+            <div className="z-50 flex-none bg-gradient-to-b from-[#555555] to-[#212121] text-white shadow-md">
+                <div className="mx-auto flex w-full max-w-[100rem] items-center justify-between px-3 py-3">
+                    <div className="flex items-center space-x-4">
+                        <img src={dostLogo} alt="DOST Logo" className="h-12 w-auto pl-2" />
+                        <div className="ml-4 hidden border-l border-white pl-4 text-sm leading-tight opacity-100 md:block">
+                            LitPath AI: <br /> Smart PathFinder for Theses and Dissertation
                         </div>
                     </div>
+                    <div className="flex items-center gap-6">
+                        <div className="hidden text-right sm:block">
+                            <div className="text-xs text-gray-400">Philippine Standard Time</div>
+                            <div className="text-sm font-medium text-white">
+                                {currentDateTime.toLocaleString('en-US', {
+                                    weekday: 'short',
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit',
+                                    hour12: true,
+                                })}
+                            </div>
+                        </div>
+                        <div className="relative" ref={userMenuRef}>
+                            <button
+                                type="button"
+                                onClick={() => setShowUserMenu((current) => !current)}
+                                className="flex items-center gap-2 rounded p-1.5 transition-colors hover:bg-white/10"
+                            >
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-blue-600 text-xs font-bold text-white shadow-md">
+                                    {user?.username?.[0]?.toUpperCase() || 'A'}
+                                </div>
+                                <ChevronDown size={14} className="text-gray-400" />
+                            </button>
+                            {showUserMenu ? (
+                                <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-1 text-gray-800 shadow-xl">
+                                    <div className="border-b border-gray-100 px-4 py-3">
+                                        <p className="text-sm font-bold">{user?.full_name || 'Admin User'}</p>
+                                        <p className="truncate text-xs text-gray-500">{user?.email || 'admin@litpath.ai'}</p>
+                                        <div className="mt-2 flex items-center gap-2">
+                                            <ShieldCheck size={14} className="text-blue-600" />
+                                            <span className="text-xs font-medium text-gray-700">{getRoleLabel(user?.role)}</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            navigate('/it-admin/dashboard');
+                                            setActiveTab('accounts');
+                                            setShowUserMenu(false);
+                                        }}
+                                        className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-gray-50"
+                                    >
+                                        <LayoutDashboard size={16} /> Dashboard
+                                    </button>
+                                    <div className="my-1 border-t border-gray-100" />
+                                    <button
+                                        type="button"
+                                        onClick={logout}
+                                        className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                                    >
+                                        <LogOut size={16} /> Sign Out
+                                    </button>
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                    <div className="border-b border-slate-200/70 bg-white px-6 py-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                            {tabs.map((tab) => (
+            <div className="flex flex-1 overflow-hidden">
+                <aside className={`z-20 flex flex-col border-r border-gray-200 bg-white transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-16'}`}>
+                    <div className={`flex h-16 items-center border-b border-gray-100 ${isSidebarOpen ? 'justify-start px-4' : 'justify-center p-0'}`}>
+                        <button
+                            type="button"
+                            title="Toggle sidebar"
+                            onClick={() => setIsSidebarOpen((current) => !current)}
+                            className="rounded p-2 text-gray-600 transition-colors hover:bg-gray-100"
+                        >
+                            <Menu size={24} />
+                        </button>
+                    </div>
+                    <nav className="flex-1 space-y-2 overflow-y-auto px-3 py-4">
+                        {tabs.map((tab) => {
+                            const Icon = tab.icon;
+                            return (
                                 <button
                                     key={tab.key}
                                     type="button"
+                                    title={tab.label}
                                     onClick={() => setActiveTab(tab.key)}
-                                    className={`rounded-2xl px-4 py-2 text-sm font-semibold transition ${activeTab === tab.key
-                                        ? 'bg-slate-900 text-white'
-                                        : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                                    }`}
+                                    className={`flex w-full items-center rounded-lg p-3 text-sm transition-colors ${isSidebarOpen ? 'justify-start' : 'justify-center'} ${activeTab === tab.key ? 'bg-blue-50 font-semibold text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
                                 >
-                                    {tab.label}
+                                    <Icon size={20} className="flex-shrink-0" />
+                                    <span className={`whitespace-nowrap transition-all duration-300 ${isSidebarOpen ? 'ml-3 opacity-100' : 'ml-0 w-0 overflow-hidden opacity-0'}`}>{tab.label}</span>
                                 </button>
-                            ))}
-                        </div>
+                            );
+                        })}
+                    </nav>
+                    <div className={`overflow-hidden whitespace-nowrap border-t border-gray-100 p-4 text-center text-xs text-gray-400 transition-all duration-300 ${isSidebarOpen ? 'opacity-100' : 'h-0 p-0 opacity-0'}`}>
+                        &copy; 2025 LitPath AI
                     </div>
+                </aside>
 
-                    <div className="border-b border-slate-200/70 bg-slate-50/60 px-6 py-4">
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
+                <main className="relative flex flex-1 flex-col overflow-hidden bg-gray-50 p-4">
+                    <div className="h-full overflow-y-auto pr-1">
+                        <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <h1 className="text-xl font-bold text-gray-800">{activeTabLabel}</h1>
+                                    <p className="text-sm text-gray-500">Manage platform access, logs, and system configuration.</p>
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
                             {activeTab === 'accounts' ? (
                                 <>
                                     <span className="inline-flex items-center gap-2 font-semibold text-slate-900">
@@ -891,7 +989,7 @@ const ITAdminDashboard = () => {
                                         Library admins {metrics.staff}
                                     </span>
                                 </>
-                            ) : activeTab === 'database' ? (
+                            ) : activeTab === '__database_disabled__' ? (
                                 <>
                                     <span className="inline-flex items-center gap-2 font-semibold text-slate-900">
                                         <Database className="h-4 w-4 text-slate-400" />
@@ -1138,7 +1236,7 @@ const ITAdminDashboard = () => {
                                     )}
                                 </div>
                             </>
-                        ) : activeTab === 'database' ? (
+                        ) : activeTab === '__database_disabled__' ? (
                             <>
                                 <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                                     <div>
@@ -2037,6 +2135,8 @@ const ITAdminDashboard = () => {
                         ) : null}
                     </div>
                 </div>
+                </div>
+                </main>
             </div>
 
             {toast.show ? (

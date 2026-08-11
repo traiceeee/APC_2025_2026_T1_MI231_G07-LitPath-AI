@@ -57,6 +57,13 @@ const FeedbackDetail = () => {
         return String(value);
     };
 
+    const getDisplayClientType = (item) => {
+        if (!item) return '—';
+        if (item.display_client_type) return item.display_client_type;
+        if (item.client_type === 'Others' && item.client_type_other) return item.client_type_other;
+        return item.client_type || '—';
+    };
+
     useEffect(() => {
         const fetchDetail = async () => {
             try {
@@ -330,7 +337,7 @@ const FeedbackDetail = () => {
                                     </label>
                                     <div className="grid grid-cols-2 gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm">
                                         <span className="text-gray-600">Client Type:</span>
-                                        <span className="font-medium">{feedback.client_type || '—'}</span>
+                                        <span className="font-medium">{getDisplayClientType(feedback)}</span>
                                         <span className="text-gray-600">Date of Interaction:</span>
                                         <span className="font-medium">{feedback.date || '—'}</span>
                                         <span className="text-gray-600">Sex:</span>

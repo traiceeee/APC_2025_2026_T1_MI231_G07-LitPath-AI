@@ -58,12 +58,13 @@ class CSMFeedbackSerializer(serializers.ModelSerializer):
     last_edited_by = serializers.PrimaryKeyRelatedField(read_only=True)
     last_edited_by_name = serializers.SerializerMethodField()
     edit_history = serializers.JSONField(read_only=True)
+    display_client_type = serializers.SerializerMethodField()
 
     class Meta:
         model = CSMFeedback
         fields = [
             'id', 'user_id', 'session_id',
-            'consent_given', 'client_type', 'date', 'sex', 'age', 'region', 'category',
+            'consent_given', 'client_type', 'display_client_type', 'client_type_other', 'date', 'sex', 'age', 'region', 'category',
             'school_level', 'school_name', 'company',
             'litpath_rating', 'research_interests', 'missing_content', 'message_comment',
             'created_at',
@@ -75,8 +76,26 @@ class CSMFeedbackSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'last_edited_by', 'last_edited_by_name', 'last_edited_at', 'edit_history']
 
+    def validate(self, attrs):
+        client_type = attrs.get('client_type', getattr(self.instance, 'client_type', None))
+        client_type_other = (attrs.get('client_type_other') or getattr(self.instance, 'client_type_other', '') or '').strip()
+
+        if client_type == 'Others':
+            if not client_type_other:
+                raise serializers.ValidationError({'client_type_other': 'Please specify the client type when Others is selected.'})
+            attrs['client_type_other'] = client_type_other
+        else:
+            attrs['client_type_other'] = ''
+
+        return attrs
+
     def get_last_edited_by_name(self, obj):
         editor = getattr(obj, 'last_edited_by', None)
         if not editor:
             return None
         return editor.full_name or editor.username or editor.email or str(editor.id)
+
+    def get_display_client_type(self, obj):
+        if obj.client_type == 'Others' and getattr(obj, 'client_type_other', None):
+            return obj.client_type_other
+        return obj.client_type
